@@ -39,8 +39,7 @@ export default function ItemDetailPage() {
           className="text-4xl font-bold mb-6 text-white" 
           style={{ color: "#ffffff" }}
         >
-          {/* @ts-ignore */}
-          {item.name || item.title}
+          {item.name}
         </h1>
         
         {/* Category - Forced White */}

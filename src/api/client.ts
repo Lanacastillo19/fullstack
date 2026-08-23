@@ -21,6 +21,8 @@ export interface ClaimRecord {
   submittedAt: string;
 }
 
+export type NewClaim = Omit<ClaimRecord, "id">;
+
 const BASE_URL = "http://localhost:3001";
 
 export const api = {
@@ -48,12 +50,22 @@ export const api = {
   },
 
   // Claims API Methods
+  createClaim: async (claim: NewClaim): Promise<ClaimRecord> => {
+    const res = await fetch(`${BASE_URL}/claims`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(claim),
+    });
+    if (!res.ok) throw new Error("Failed to create claim");
+    return res.json();
+  },
+
   getClaims: async (): Promise<ClaimRecord[]> => {
     const res = await fetch(`${BASE_URL}/claims`);
     if (!res.ok) throw new Error("Failed to fetch claims");
-    const data = await res.json();
+    const data: Array<ClaimRecord & { createdAt?: string }> = await res.json();
 
-    return data.map((claim: any) => ({
+    return data.map((claim) => ({
       ...claim,
       submittedAt: claim.submittedAt || claim.createdAt || new Date().toISOString(),
     }));
