@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router";
+import { Link } from "react-router-dom"; // ✅ Fixed import
 import { api, type Item, type NewItem } from "../api/client";
 
 export default function ItemsPage() {

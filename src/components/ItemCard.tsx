@@ -3,9 +3,10 @@ import type { Item } from "../types/index";
 interface ItemCardProps {
   item: Item;
   variant?: "default" | "compact";
+  onCategoryChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
 }
 
-function ItemCard({ item, variant = "default" }: ItemCardProps) {
+function ItemCard({ item, variant = "default", onCategoryChange }: ItemCardProps) {
   const isCompact = variant === "compact";
 
   return (
@@ -54,6 +55,20 @@ function ItemCard({ item, variant = "default" }: ItemCardProps) {
         <p className="my-1 text-sm text-gray-400">
           Reported by User #{item.reportedBy}
         </p>
+      )}
+
+      {onCategoryChange && (
+        <div className="mt-3">
+          <label className="block mb-1 text-xs text-gray-400">Filter Category:</label>
+          <select 
+            onChange={onCategoryChange}
+            className="w-full bg-gray-700 text-white text-xs rounded p-1.5 border border-gray-600"
+          >
+            <option value="All">All Categories</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Personal Items">Personal Items</option>
+          </select>
+        </div>
       )}
     </div>
   );

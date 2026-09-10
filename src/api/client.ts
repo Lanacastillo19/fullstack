@@ -23,7 +23,7 @@ export interface ClaimRecord {
 
 export type NewClaim = Omit<ClaimRecord, "id">;
 
-const BASE_URL = "http://localhost:3001";
+const BASE_URL = "http://127.0.0.1:3002";
 
 export const api = {
   // Items API Methods
@@ -39,6 +39,12 @@ export const api = {
     return res.json();
   },
 
+  getItem: async (id: string): Promise<Item> => {
+    const res = await fetch(`${BASE_URL}/items/${id}`);
+    if (!res.ok) throw new Error("Failed to fetch item");
+    return res.json();
+  },
+
   createItem: async (item: NewItem): Promise<Item> => {
     const res = await fetch(`${BASE_URL}/items`, {
       method: "POST",
@@ -46,6 +52,16 @@ export const api = {
       body: JSON.stringify(item),
     });
     if (!res.ok) throw new Error("Failed to create item");
+    return res.json();
+  },
+
+  updateItemStatus: async (id: string, status: string): Promise<Item> => {
+    const res = await fetch(`${BASE_URL}/items/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) throw new Error("Failed to update item status");
     return res.json();
   },
 
