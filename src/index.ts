@@ -1,67 +1,44 @@
-// ===== ENUM-STYLE CONSTANTS =====
-// erasableSyntaxOnly blocks the `enum` keyword, so we use `as const` objects instead --
-// same usage (Role.Student, ClaimStatus.Pending), fully erasable.
-export const Role = {
-  Student: "student",
-  Admin: "admin",
-  Instructor: "instructor",
-} as const;
-export type Role = (typeof Role)[keyof typeof Role];
+import express, { type Request, type Response } from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import { connectDB } from "./config/db";
+import { authRouter } from "./routes/auth";
+import { itemRouter } from "./routes/items";
 
-export const ClaimStatus = {
-  Pending: "Pending",
-  Approved: "Approved",
-  Rejected: "Rejected",
-} as const;
-export type ClaimStatus = (typeof ClaimStatus)[keyof typeof ClaimStatus];
+dotenv.config();
 
-// ===== INTERFACES =====
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: Role;
-  isActive: boolean;
-}
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-export interface Item {
-  id: number | string;
-  title: string;
-  name?: string;
-  category?: string;
-  description?: string;
-  location?: string;
-  reportedBy?: number;
-  status?: string;
-}
+connectDB();
 
-export interface Claim {
-  id: number;
-  itemId: number;
-  claimedBy: number;
-  notes: string;
-  submittedAt: Date;
-  status?: ClaimStatus;
-}
+app.use(
+  cors({
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void
+    ) => {
+      if (!origin) return callback(null, true);
+      if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 
-// ===== TYPE ALIASES =====
-export type ID = number | string;
+app.use(express.json());
 
-export type Coordinate = {
-  x: number;
-  y: number;
-};
+app.get("/api/health", (_req: Request, res: Response) => {
+  res.json({ success: true, status: "healthy", db: true });
+});
 
-export type Formatter = (value: number) => string;
+app.use("/api/auth", authRouter);
+app.use("/api/items", itemRouter);
 
-// ===== GENERIC INTERFACE =====
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-}
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
-// ===== UTILITY TYPES =====
-export type UserUpdate = Partial<User>;
-export type UserPreview = Pick<User, "id" | "name" | "role">;
-export type PublicUser = Omit<User, "email" | "isActive">;
-export type RoleCount = Partial<Record<Role, number>>;
+export default app;
