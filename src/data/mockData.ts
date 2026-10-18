@@ -1,21 +1,21 @@
-import type { User, Claim } from "../types/index";
-import { Role } from "../types/index";
+import type { User, Item, Claim } from "../types/index";
 
-export const student: User = {
-  id: 1,
-  name: "Lorenz Allen Biscocho",
-  email: "lorenzallen@gmail.com",
-  role: Role.Student,
+export const mockUser: User = {
+  id: "1",
+  name: "Juan Dela Cruz",
+  email: "juan@example.com",
+  role: "student",
   isActive: true,
 };
 
-export const claims: Claim[] = [
+// Export student so DashboardPage can access it
+export const student = mockUser;
+
+export const mockClaims: Claim[] = [
   {
-    id: 1,
-    itemId: 1,
-    claimedBy: 1,
-    status: "Pending",
-    notes: "This is mine — it has my initials on the case.",
-    submittedAt: new Date("2026-08-18"),
+    id: "1",
+    itemId: "1",
+    status: "pending",
+    createdAt: "2026-03-01",
   },
 ];

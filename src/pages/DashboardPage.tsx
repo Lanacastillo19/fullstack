@@ -1,14 +1,15 @@
 import { useState } from "react";
 import useToggle from "../hooks/useToggle";
-import { student } from "../data/mockData";
+import { mockUser } from "../data/mockData";
 
 export default function DashboardPage() {
-  const [selectedUser, setSelectedUser] = useState<string | null>(student.name);
+  // Use mockUser directly
+  const [selectedUser, setSelectedUser] = useState<string | null>(mockUser.name);
   const [showDetails, toggleDetails] = useToggle(true);
 
   // Toggle selection on click
   const handleToggleSelect = () => {
-    setSelectedUser((prev) => (prev ? null : student.name));
+    setSelectedUser((prev) => (prev ? null : mockUser.name));
   };
 
   return (
@@ -37,15 +38,15 @@ export default function DashboardPage() {
           {/* User Profile Card */}
           <div className="flex flex-col items-center rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800/60">
             <div className="relative mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-blue-600 text-2xl font-bold text-white shadow-md ring-4 ring-blue-500/10 dark:ring-blue-500/20">
-              {student.name.charAt(0)}
+              {mockUser.name.charAt(0)}
               <span className="absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-800" />
             </div>
 
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-              {student.name}
+              {mockUser.name}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {student.email}
+              {mockUser.email}
             </p>
 
             {/* Expandable Details */}
@@ -54,7 +55,7 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-500 dark:text-slate-400">Role</span>
                   <span className="font-semibold capitalize text-slate-800 dark:text-slate-200">
-                    {student.role}
+                    {mockUser.role}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -119,7 +120,7 @@ export default function DashboardPage() {
                 </span>{" "}
                 {selectedUser && (
                   <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
-                    ({student.role})
+                    ({mockUser.role})
                   </span>
                 )}
               </p>

@@ -37,7 +37,7 @@ export default function App() {
     category: "General",
   });
 
-  // Active Session User Profile (id updated to string)
+  // Active Session User Profile
   const mockUser: User = {
     id: "1",
     name: "Lorenz Allen Biscocho",
@@ -203,7 +203,7 @@ export default function App() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {filteredItems.map((item) => (
-            <div key={item.id} className="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-2">
+            <div key={item.id || item._id} className="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-2">
               <div className="flex justify-between items-start">
                 <h3 className="font-bold text-lg">{item.title}</h3>
                 <span className="text-xs px-2 py-0.5 bg-gray-700 rounded text-gray-300">

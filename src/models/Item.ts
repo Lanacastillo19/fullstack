@@ -1,4 +1,4 @@
-import { Schema, model, models } from "mongoose";
+import { Schema, model, models, Types } from "mongoose";
 import type { ItemDoc } from "../types/index";
 
 const itemSchema = new Schema<ItemDoc>(
@@ -41,7 +41,7 @@ const itemSchema = new Schema<ItemDoc>(
 );
 
 itemSchema.set("toJSON", {
-  transform(_doc: unknown, ret: Record<string, unknown>) {
+  transform(_doc: unknown, ret: any) {
     ret.id = String(ret._id);
     delete ret._id;
     delete ret.__v;

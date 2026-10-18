@@ -53,7 +53,7 @@ function ItemCard({ item, variant = "default", onCategoryChange }: ItemCardProps
 
       {!isCompact && item.reportedBy && (
         <p className="my-1 text-sm text-gray-400">
-          Reported by User #{item.reportedBy}
+          Reported by User #{String(item.reportedBy)}
         </p>
       )}
 
