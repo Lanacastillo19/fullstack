@@ -1,0 +1,50 @@
+{
+  "courses": [
+    {
+      "id": "1",
+      "code": "ITELECT4",
+      "title": "IT Elective 4 - Web Architecture & Development",
+      "units": 3,
+      "semester": "1st Semester 2026-2027"
+    },
+    {
+      "id": "2",
+      "code": "ITELECT3",
+      "title": "IT Elective 3 - Enterprise Systems",
+      "units": 3,
+      "semester": "2nd Semester 2025-2026"
+    },
+    {
+      "id": "3",
+      "code": "CSSWENG",
+      "title": "Software Engineering Principles",
+      "units": 3,
+      "semester": "1st Semester 2026-2027"
+    }
+  ],
+  "submissions": [
+    {
+      "id": "1",
+      "studentId": 1,
+      "courseCode": "ITELECT4",
+      "repoUrl": "github.com/juan/itelect4-project-part2",
+      "submittedAt": "2026-08-01T09:00:00.000Z",
+      "score": 95
+    },
+    {
+      "id": "2",
+      "studentId": 1,
+      "courseCode": "ITELECT3",
+      "repoUrl": "github.com/juan/itelect3-final-exam",
+      "submittedAt": "2026-07-18T09:00:00.000Z"
+    },
+    {
+      "id": "3",
+      "studentId": 1,
+      "courseCode": "CSSWENG",
+      "repoUrl": "github.com/juan/cssweng-sprint1-docs",
+      "submittedAt": "2026-08-10T09:00:00.000Z",
+      "score": 90
+    }
+  ]
+}
