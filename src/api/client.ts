@@ -1,9 +1,9 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+// src/api/client.ts
+import type { Course, Submission } from "../types";
 
-export async function apiFetch<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
+const API_URL = import.meta.env.VITE_API_URL || "https://backend-21o5.vercel.app/api";
+
+export async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem("token");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -14,15 +14,24 @@ export async function apiFetch<T>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers,
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || "An error occurred");
+  if (!response.ok) {
+    throw new Error(`API error: ${response.statusText}`);
   }
 
-  return res.json();
+  return response.json();
 }
+
+// Exported helper functions required by pages
+export const fetchCourses = () => request<Course[]>("/courses");
+export const fetchCourseByCode = (code: string) => request<Course>(`/courses/${code}`);
+export const fetchSubmissions = () => request<Submission[]>("/submissions");
+export const createSubmission = (data: Partial<Submission>) =>
+  request<Submission>("/submissions", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });

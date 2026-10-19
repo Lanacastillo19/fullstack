@@ -1,72 +1,30 @@
-import { useParams, useNavigate } from "react-router";
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCourseByCode } from "../api/client";
+import type { Course } from "../types";
 
-function CourseDetailPage() {
-  const { code } = useParams<{ code: string }>();
-  const navigate = useNavigate();
-
-  const {
-    data: course,
-    isLoading,
-    isError,
-    error,
-  } = useQuery({
+export const CourseDetailPage: React.FC<{ code?: string }> = ({ code = "" }) => {
+  const { data: course, isLoading, isError } = useQuery<Course>({
     queryKey: ["course", code],
-    queryFn: () => fetchCourseByCode(code!),
-    enabled: Boolean(code),
+    queryFn: () => fetchCourseByCode(code),
+    enabled: !!code,
   });
 
-  if (isLoading) {
-    return (
-      <p className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-        Loading course details...
-      </p>
-    );
-  }
-
-  if (isError || !course) {
-    return (
-      <div className="space-y-4">
-        <div className="rounded-lg bg-red-50 p-4 text-red-700 dark:bg-red-950 dark:text-red-200">
-          {error instanceof Error
-            ? error.message
-            : `No course found with code "${code}".`}
-        </div>
-        <button
-          onClick={() => navigate("/courses")}
-          className="rounded bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-        >
-          Back to Courses
-        </button>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="p-6">Loading course details...</div>;
+  if (isError || !course) return <div className="p-6 text-red-500">Course not found.</div>;
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-        {course.title}
-      </h2>
-      <div className="max-w-sm rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-        <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-          {course.code}
-        </h3>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          Units: {course.units}
-        </p>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Semester: {course.semester}
-        </p>
-      </div>
-      <button
-        onClick={() => navigate("/courses")}
-        className="rounded bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-      >
-        Back to Courses
-      </button>
+    <div className="p-6 max-w-2xl mx-auto">
+      <h1 className="text-3xl font-bold mb-2">{course.title}</h1>
+      <p className="text-gray-600 mb-4">Course Code: {course.code}</p>
+      {course.description && (
+        <div className="border-t pt-4 mt-4">
+          <h2 className="text-xl font-semibold mb-2">Description</h2>
+          <p className="text-gray-700">{course.description}</p>
+        </div>
+      )}
     </div>
   );
-}
+};
 
 export default CourseDetailPage;

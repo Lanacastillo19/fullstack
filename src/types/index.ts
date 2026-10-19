@@ -1,38 +1,49 @@
-// ===== INTERFACES =====
+// src/types/index.ts
+
 export interface User {
-  id: number;
+  _id?: string;
+  id?: number | string;
   name: string;
   email: string;
-  role: "student" | "admin" | "instructor";
-  isActive: boolean;
+  role?: "student" | "admin" | "instructor";
+  isActive?: boolean;
   score?: number;
 }
 
 export interface Course {
-  id?: number;
+  _id?: string;
+  id?: number | string;
   code: string;
   title: string;
-  units: number;
-  semester: string;
+  units?: number;
+  semester?: string;
+  description?: string;
 }
 
 export interface Submission {
-  id: number;
-  studentId: number;
-  courseCode: string;
-  repoUrl: string;
-  submittedAt: Date;
+  _id?: string;
+  id?: number | string;
+  studentId?: number | string;
+  title?: string;
+  courseCode?: string;
+  repoUrl?: string;
+  content?: string;
+  status?: string;
   score?: number;
+  submittedAt?: string | Date;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface LostItem {
-  id: number;
+  _id?: string;
+  id?: number | string;
   name: string;
   location: string;
 }
 
 // ===== TYPE ALIASES =====
-export type ID = number | string;
+export type ID = string | number;
 export type Coordinate = {
   x: number;
   y: number;
@@ -42,8 +53,8 @@ export type StringOrNumber = string | number;
 export type Status = "pending" | "active" | "inactive";
 
 export type StudentWithCourse = User & {
-  enrolledCourse: Course;
-  gpa: number;
+  enrolledCourse?: Course;
+  gpa?: number;
 };
 
 // ===== GENERIC INTERFACE =====
@@ -55,13 +66,13 @@ export interface ApiResponse<T> {
 
 // ===== UTILITY TYPES =====
 export type UserUpdate = Partial<User>;
-export type NewSubmissionPayload = Omit<Submission, "id">;
+export type NewSubmissionPayload = Omit<Submission, "_id" | "id">;
 
 // ===== ENUMS & CONSTANTS =====
 export const SubmissionStatus = {
-  Pending: 0,
-  Graded: 1,
-  Late: 2,
+  Pending: "pending",
+  Graded: "graded",
+  Late: "late",
 } as const;
 export type SubmissionStatus =
   (typeof SubmissionStatus)[keyof typeof SubmissionStatus];
@@ -76,9 +87,5 @@ export type Role = (typeof Role)[keyof typeof Role];
 export const UserRole = Role;
 export type UserRole = Role;
 
-export type ApiSubmission = Omit<Submission, "id" | "submittedAt"> & {
-  id: string;
-  submittedAt: string;
-};
-
-export type NewSubmission = Omit<ApiSubmission, "id">;
+export type ApiSubmission = Submission;
+export type NewSubmission = Omit<Submission, "_id" | "id">;
