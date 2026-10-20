@@ -195,7 +195,7 @@ export default function App() {
         }`}
       >
         <div className="flex items-center gap-8">
-          <span className="font-bold text-xl tracking-tight">Course Portal</span>
+          <span className="font-bold text-xl tracking-tight">Lost and Found</span>
           <nav className="flex gap-2 text-sm font-medium">
             {["Dashboard", "Claimed", "Submissions", "Login"].map((tab) => (
               <button
