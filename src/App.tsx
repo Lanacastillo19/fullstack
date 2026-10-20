@@ -8,7 +8,15 @@ export type CreateItemDTO = {
   category: string;
 };
 
-// Normalize API_BASE_URL to prevent double slashes or missing trailing slashes
+type ClaimRecord = {
+  id: string;
+  itemId: string;
+  itemTitle?: string;
+  claimedBy: string;
+  claimDate: string;
+  status?: string;
+};
+
 const rawApiUrl = import.meta.env.VITE_API_URL || "https://gt-4-fullstack.vercel.app";
 const API_BASE_URL = rawApiUrl.replace(/\/+$/, "").replace(/\/api$/, "");
 
@@ -26,8 +34,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 }
 
 export default function App() {
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<string>("Dashboard");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
   const [items, setItems] = useState<Item[]>([]);
+  const [claims, setClaims] = useState<ClaimRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +50,6 @@ export default function App() {
     category: "General",
   });
 
-  // Active Session User Profile
   const mockUser: User = {
     id: "1",
     name: "Lorenz Allen Biscocho",
@@ -52,14 +63,10 @@ export default function App() {
       setLoading(true);
       setError(null);
 
-      // Fetch items from backend API
       const res = await request<any>("/api/items");
-
-      // Handle direct array returns or standard { success, data } payloads
       const rawData = Array.isArray(res) ? res : res?.data || res?.items || [];
 
       if (Array.isArray(rawData)) {
-        // Map backend schema into unified UI state
         const normalizedItems: Item[] = rawData.map((item: any) => ({
           ...item,
           id: item.id || item._id,
@@ -79,8 +86,19 @@ export default function App() {
     }
   };
 
+  const fetchClaims = async () => {
+    try {
+      const res = await request<any>("/api/claims");
+      const rawClaims = Array.isArray(res) ? res : res?.data || res?.claims || [];
+      setClaims(rawClaims);
+    } catch (err) {
+      console.error("Error fetching claims:", err);
+    }
+  };
+
   useEffect(() => {
     fetchItems();
+    fetchClaims();
   }, []);
 
   const handleCreateItem = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -107,7 +125,6 @@ export default function App() {
       }
     } catch (err) {
       console.error("Error creating item:", err);
-      // Fallback: update local UI state if backend is offline
       const localItem: Item = {
         id: String(Date.now()),
         title: newItem.title,
@@ -124,7 +141,6 @@ export default function App() {
 
   const handleClaimItem = async (itemId: string, itemTitle: string) => {
     try {
-      // Send claim request to backend claims endpoint
       await request<{ success: boolean }>("/api/claims", {
         method: "POST",
         body: JSON.stringify({
@@ -134,149 +150,234 @@ export default function App() {
         }),
       });
 
-      alert(`Claim request submitted successfully for "${itemTitle}"!`);
-      fetchItems();
+      alert(`Claim request registered for "${itemTitle}"!`);
+      fetchClaims();
     } catch (err) {
       console.error("Error claiming item:", err);
-      // Fallback response for UI demo
+      const newClaim: ClaimRecord = {
+        id: String(Date.now()),
+        itemId,
+        itemTitle,
+        claimedBy: mockUser.id,
+        claimDate: new Date().toISOString(),
+        status: "Pending",
+      };
+      setClaims((prev) => [newClaim, ...prev]);
       alert(`Claim request registered for "${itemTitle}"!`);
     }
   };
 
-  // Filter items matching either category or status (case-insensitive)
   const filteredItems = items.filter((item) => {
-    if (selectedCategory === "All") return true;
+    const matchesSearch =
+      (item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.description || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.location || "").toLowerCase().includes(searchQuery.toLowerCase());
 
-    const cat = (item.category || "").toLowerCase();
-    const status = (item.status || "").toLowerCase();
-    const selected = selectedCategory.toLowerCase();
+    if (!matchesSearch) return false;
 
-    return cat === selected || status === selected;
+    if (activeTab === "Claimed") {
+      return claims.some((c) => c.itemId === (item.id || item._id));
+    }
+
+    return true;
   });
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8 space-y-8">
-      <h1 className="text-2xl font-bold border-b border-gray-700 pb-4">
-        Lost & Found Management (GT4 Integration)
-      </h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* User Profile Card */}
-        <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-          <h2 className="text-lg font-semibold mb-2">Active Session</h2>
-          <p className="font-bold">{mockUser.name}</p>
-          <p className="text-sm text-gray-400">{mockUser.email}</p>
-          <span className="inline-block mt-2 px-2 py-1 text-xs bg-blue-900 text-blue-300 rounded">
-            {mockUser.role}
-          </span>
+    <div
+      className={`min-h-screen transition-colors ${
+        isDarkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"
+      }`}
+    >
+      {/* Top Header Navigation Bar */}
+      <header
+        className={`border-b px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 ${
+          isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center gap-8">
+          <span className="font-bold text-xl tracking-tight">Course Portal</span>
+          <nav className="flex gap-2 text-sm font-medium">
+            {["Dashboard", "Claimed", "Submissions", "Login"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1.5 rounded-md transition-colors ${
+                  activeTab === tab
+                    ? "bg-blue-600 text-white"
+                    : isDarkMode
+                    ? "text-gray-300 hover:text-white"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                {tab === "Claimed" ? `Claimed Items (${claims.length})` : tab}
+              </button>
+            ))}
+          </nav>
         </div>
 
-        {/* Report Lost Item Form */}
-        <div className="bg-gray-800 p-5 rounded-xl border border-gray-700 md:col-span-2">
-          <h2 className="text-lg font-semibold mb-3">Report Lost Item</h2>
+        <button
+          onClick={() => setIsDarkMode(!isDarkMode)}
+          className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
+            isDarkMode
+              ? "bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+              : "bg-gray-900 border-gray-900 text-white hover:bg-gray-800"
+          }`}
+        >
+          {isDarkMode ? "Light Mode" : "Dark Mode"}
+        </button>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold">{activeTab}</h1>
+          <p className="text-gray-500 text-sm">
+            Total Items: {filteredItems.length}
+          </p>
+        </div>
+
+        {/* Search Input Bar */}
+        <div>
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`w-full p-3 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              isDarkMode
+                ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400"
+                : "bg-white border-gray-200 text-gray-900 placeholder-gray-400"
+            }`}
+          />
+        </div>
+
+        {/* Item Cards Stacked Layout */}
+        <div className="space-y-3">
+          {loading && <p className="text-gray-400 text-sm">Loading items...</p>}
+          {error && <p className="text-amber-500 text-sm">{error}</p>}
+
+          {!loading && filteredItems.length === 0 && (
+            <div
+              className={`p-6 rounded-lg border text-center text-gray-400 text-sm ${
+                isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+              }`}
+            >
+              No items found.
+            </div>
+          )}
+
+          {filteredItems.map((item) => {
+            const isClaimed = claims.some((c) => c.itemId === (item.id || item._id));
+            return (
+              <div
+                key={item.id || item._id}
+                className={`p-5 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-shadow hover:shadow-sm ${
+                  isDarkMode
+                    ? "bg-gray-800 border-gray-700"
+                    : "bg-white border-gray-200"
+                }`}
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <h2 className="font-bold text-base">{item.title}</h2>
+                    {isClaimed && (
+                      <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-medium">
+                        Claimed
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {item.category || "IT4B"} • 📍 {item.location}
+                  </p>
+                  <p className="text-sm text-gray-500">{item.description}</p>
+                </div>
+
+                <button
+                  onClick={() =>
+                    handleClaimItem(item.id || item._id || "", item.title || "Item")
+                  }
+                  className={`px-4 py-2 text-xs font-semibold rounded-md transition-colors whitespace-nowrap ${
+                    isClaimed
+                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                >
+                  {isClaimed ? "Claimed ✓" : "Claim Item"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Report New Item Form */}
+        <div
+          className={`p-6 rounded-lg border space-y-4 ${
+            isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+          }`}
+        >
+          <h2 className="text-lg font-bold">Report Lost / Found Item</h2>
           <form onSubmit={handleCreateItem} className="space-y-3">
             <input
               type="text"
               placeholder="Item Title"
               value={newItem.title}
               onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
-              className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:outline-none"
+              className={`w-full p-2.5 rounded border text-sm focus:outline-none ${
+                isDarkMode
+                  ? "bg-gray-700 border-gray-600 text-white"
+                  : "bg-gray-50 border-gray-200 text-gray-900"
+              }`}
               required
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input
                 type="text"
                 placeholder="Location Found/Lost"
                 value={newItem.location}
                 onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
-                className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:outline-none"
+                className={`w-full p-2.5 rounded border text-sm focus:outline-none ${
+                  isDarkMode
+                    ? "bg-gray-700 border-gray-600 text-white"
+                    : "bg-gray-50 border-gray-200 text-gray-900"
+                }`}
                 required
               />
               <select
                 value={newItem.category}
                 onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
-                className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:outline-none text-white"
+                className={`w-full p-2.5 rounded border text-sm focus:outline-none ${
+                  isDarkMode
+                    ? "bg-gray-700 border-gray-600 text-white"
+                    : "bg-gray-50 border-gray-200 text-gray-900"
+                }`}
               >
                 <option value="General">General</option>
                 <option value="Electronics">Electronics</option>
                 <option value="Personal Items">Personal Items</option>
                 <option value="Documents">Documents</option>
-                <option value="Found">Found</option>
-                <option value="Lost">Lost</option>
               </select>
             </div>
             <textarea
               placeholder="Description"
               value={newItem.description}
               onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-              className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:outline-none"
+              className={`w-full p-2.5 rounded border text-sm focus:outline-none ${
+                isDarkMode
+                  ? "bg-gray-700 border-gray-600 text-white"
+                  : "bg-gray-50 border-gray-200 text-gray-900"
+              }`}
               rows={2}
               required
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 rounded font-medium hover:bg-blue-500 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white font-medium text-sm rounded hover:bg-blue-700 transition-colors"
             >
               Report Item
             </button>
           </form>
         </div>
-      </div>
-
-      {/* Reported Items List */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center border-b border-gray-700 pb-2">
-          <h2 className="text-xl font-semibold">Reported Items</h2>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="p-1 rounded bg-gray-800 text-sm border border-gray-700"
-          >
-            <option value="All">All Categories</option>
-            <option value="General">General</option>
-            <option value="Electronics">Electronics</option>
-            <option value="Personal Items">Personal Items</option>
-            <option value="Documents">Documents</option>
-            <option value="Found">Found</option>
-            <option value="Lost">Lost</option>
-          </select>
-        </div>
-
-        {loading && <p className="text-gray-400">Loading items...</p>}
-        {error && <p className="text-amber-400 text-sm">{error}</p>}
-
-        {!loading && filteredItems.length === 0 && (
-          <p className="text-gray-400">No reported items found in the database.</p>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {filteredItems.map((item) => (
-            <div
-              key={item.id || item._id}
-              className="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3 flex flex-col justify-between"
-            >
-              <div className="space-y-2">
-                <div className="flex justify-between items-start">
-                  <h3 className="font-bold text-lg">{item.title}</h3>
-                  <span className="text-xs px-2 py-0.5 bg-gray-700 rounded text-gray-300">
-                    {item.category || "General"}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-300">{item.description}</p>
-                <p className="text-xs text-blue-400">📍 {item.location}</p>
-              </div>
-
-              <button
-                onClick={() => handleClaimItem(item.id || item._id || "", item.title || "Untitled Item")}
-                className="w-full mt-2 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm rounded transition-colors"
-              >
-                Claim Item
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
+      </main>
     </div>
   );
 }
-
