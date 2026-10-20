@@ -59,12 +59,13 @@ export default function App() {
       const rawData = Array.isArray(res) ? res : res?.data || res?.items || [];
 
       if (Array.isArray(rawData)) {
-        // Map backend schema (name / title) into unified UI state
+        // Map backend schema into unified UI state
         const normalizedItems: Item[] = rawData.map((item: any) => ({
           ...item,
           id: item.id || item._id,
           title: item.title || item.name || "Untitled Item",
           location: item.location || "Campus Ground",
+          category: item.category || "General",
         }));
         setItems(normalizedItems);
       } else {
@@ -121,9 +122,16 @@ export default function App() {
     }
   };
 
-  const filteredItems = items.filter((item) =>
-    selectedCategory === "All" ? true : item.category === selectedCategory
-  );
+  // Filter items matching either category or status (case-insensitive)
+  const filteredItems = items.filter((item) => {
+    if (selectedCategory === "All") return true;
+
+    const cat = (item.category || "").toLowerCase();
+    const status = (item.status || "").toLowerCase();
+    const selected = selectedCategory.toLowerCase();
+
+    return cat === selected || status === selected;
+  });
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8 space-y-8">
