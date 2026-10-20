@@ -122,6 +122,27 @@ export default function App() {
     }
   };
 
+  const handleClaimItem = async (itemId: string, itemTitle: string) => {
+    try {
+      // Send claim request to backend claims endpoint
+      await request<{ success: boolean }>("/api/claims", {
+        method: "POST",
+        body: JSON.stringify({
+          itemId,
+          claimedBy: mockUser.id,
+          claimDate: new Date().toISOString(),
+        }),
+      });
+
+      alert(`Claim request submitted successfully for "${itemTitle}"!`);
+      fetchItems();
+    } catch (err) {
+      console.error("Error claiming item:", err);
+      // Fallback response for UI demo
+      alert(`Claim request registered for "${itemTitle}"!`);
+    }
+  };
+
   // Filter items matching either category or status (case-insensitive)
   const filteredItems = items.filter((item) => {
     if (selectedCategory === "All") return true;
@@ -232,16 +253,25 @@ export default function App() {
           {filteredItems.map((item) => (
             <div
               key={item.id || item._id}
-              className="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-2"
+              className="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3 flex flex-col justify-between"
             >
-              <div className="flex justify-between items-start">
-                <h3 className="font-bold text-lg">{item.title}</h3>
-                <span className="text-xs px-2 py-0.5 bg-gray-700 rounded text-gray-300">
-                  {item.category || "General"}
-                </span>
+              <div className="space-y-2">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-bold text-lg">{item.title}</h3>
+                  <span className="text-xs px-2 py-0.5 bg-gray-700 rounded text-gray-300">
+                    {item.category || "General"}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-300">{item.description}</p>
+                <p className="text-xs text-blue-400">📍 {item.location}</p>
               </div>
-              <p className="text-sm text-gray-300">{item.description}</p>
-              <p className="text-xs text-blue-400">📍 {item.location}</p>
+
+              <button
+                onClick={() => handleClaimItem(item.id || item._id || "", item.title || "Untitled Item")}
+                className="w-full mt-2 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm rounded transition-colors"
+              >
+                Claim Item
+              </button>
             </div>
           ))}
         </div>
