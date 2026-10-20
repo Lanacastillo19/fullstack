@@ -8,8 +8,9 @@ export type CreateItemDTO = {
   category: string;
 };
 
-// API Helper adhering to GT4 Part 2 guidelines
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+// Normalize API_BASE_URL to prevent double slashes or missing trailing slashes
+const rawApiUrl = import.meta.env.VITE_API_URL || "https://gt-4-fullstack.vercel.app";
+const API_BASE_URL = rawApiUrl.replace(/\/+$/, "").replace(/\/api$/, "");
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem("token");
@@ -50,17 +51,27 @@ export default function App() {
     try {
       setLoading(true);
       setError(null);
-      
-      // Fetch public GET endpoint from backend
-      const res = await request<{ success: boolean; data: Item[] }>("/api/items");
 
-      if (res.success && Array.isArray(res.data)) {
-        setItems(res.data);
+      // Fetch items from backend API
+      const res = await request<any>("/api/items");
+
+      // Handle direct array returns or standard { success, data } payloads
+      const rawData = Array.isArray(res) ? res : res?.data || res?.items || [];
+
+      if (Array.isArray(rawData)) {
+        // Map backend schema (name / title) into unified UI state
+        const normalizedItems: Item[] = rawData.map((item: any) => ({
+          ...item,
+          id: item.id || item._id,
+          title: item.title || item.name || "Untitled Item",
+          location: item.location || "Campus Ground",
+        }));
+        setItems(normalizedItems);
       } else {
         setItems([]);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Fetch error:", err);
       setError("Unable to connect to backend server. Displaying local state.");
     } finally {
       setLoading(false);
@@ -76,6 +87,7 @@ export default function App() {
     if (!newItem.title || !newItem.description || !newItem.location) return;
 
     const payload = {
+      name: newItem.title,
       title: newItem.title,
       description: newItem.description,
       location: newItem.location,
@@ -88,7 +100,7 @@ export default function App() {
         body: JSON.stringify(payload),
       });
 
-      if (result.success) {
+      if (result) {
         setNewItem({ title: "", description: "", location: "", category: "General" });
         fetchItems();
       }
@@ -97,7 +109,10 @@ export default function App() {
       // Fallback: update local UI state if backend is offline
       const localItem: Item = {
         id: String(Date.now()),
-        ...payload,
+        title: newItem.title,
+        description: newItem.description,
+        location: newItem.location,
+        category: newItem.category,
         reportedBy: mockUser.id,
         status: "Unclaimed",
       };
@@ -157,6 +172,8 @@ export default function App() {
                 <option value="Electronics">Electronics</option>
                 <option value="Personal Items">Personal Items</option>
                 <option value="Documents">Documents</option>
+                <option value="Found">Found</option>
+                <option value="Lost">Lost</option>
               </select>
             </div>
             <textarea
@@ -191,6 +208,8 @@ export default function App() {
             <option value="Electronics">Electronics</option>
             <option value="Personal Items">Personal Items</option>
             <option value="Documents">Documents</option>
+            <option value="Found">Found</option>
+            <option value="Lost">Lost</option>
           </select>
         </div>
 
@@ -203,7 +222,10 @@ export default function App() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {filteredItems.map((item) => (
-            <div key={item.id || item._id} className="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-2">
+            <div
+              key={item.id || item._id}
+              className="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-2"
+            >
               <div className="flex justify-between items-start">
                 <h3 className="font-bold text-lg">{item.title}</h3>
                 <span className="text-xs px-2 py-0.5 bg-gray-700 rounded text-gray-300">
