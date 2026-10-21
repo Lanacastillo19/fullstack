@@ -29,7 +29,8 @@ export default function App() {
   const [category, setCategory] = useState('General');
   const [description, setDescription] = useState('');
 
-  const API_URL = import.meta.env.VITE_API_URL || 'https://gt-4-fullstack.vercel.app/api';
+  // Fixed line for Vite env types
+  const API_URL = (import.meta as any).env?.VITE_API_URL || 'https://gt-4-fullstack.vercel.app/api';
 
   const fetchItems = async () => {
     try {

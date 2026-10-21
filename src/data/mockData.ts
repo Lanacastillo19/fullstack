@@ -1,4 +1,4 @@
-import type { User, Item, Claim } from "../types/index";
+import type { User, Claim } from "../types/index";
 
 export const mockUser: User = {
   id: "1",

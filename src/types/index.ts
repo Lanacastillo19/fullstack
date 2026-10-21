@@ -1,4 +1,4 @@
-import type { Types } from "mongoose";
+declare module '*.css';
 
 export interface User {
   id: string;
@@ -14,20 +14,20 @@ export interface Item {
   title: string;
   description: string;
   location: string;
-  reportedBy: string | number | Types.ObjectId;
+  reportedBy: string | number;
   category?: string;
   status?: "Unclaimed" | "Claimed" | string;
 }
 
 export interface ItemDoc {
-  _id?: string | Types.ObjectId;
+  _id?: string;
   id?: string;
   title: string;
   description: string;
   location: string;
   category: string;
   status: string;
-  reportedBy: Types.ObjectId | string | number; // <--- ADD THIS LINE
+  reportedBy: string | number;
   dateReported?: string;
   createdAt?: Date | string;
   updatedAt?: Date | string;
