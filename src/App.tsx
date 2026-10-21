@@ -1,383 +1,374 @@
-import React, { useState, useEffect } from "react";
-import type { User, Item } from "./types/index";
+import { useState, useEffect } from 'react';
+import AuthModal from './AuthModal';
 
-export type CreateItemDTO = {
-  title: string;
-  description: string;
-  location: string;
+interface Item {
+  _id: string;
+  name: string;
   category: string;
-};
+  status: string;
+  description: string;
+  createdAt?: string;
+}
 
-type ClaimRecord = {
-  id: string;
-  itemId: string;
-  itemTitle?: string;
-  claimedBy: string;
-  claimDate: string;
-  status?: string;
-};
-
-const rawApiUrl = import.meta.env.VITE_API_URL || "https://gt-4-fullstack.vercel.app";
-const API_BASE_URL = rawApiUrl.replace(/\/+$/, "").replace(/\/api$/, "");
-
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem("token");
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options.headers as Record<string, string>),
-  };
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
-  if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-  return response.json();
+interface User {
+  name?: string;
+  email: string;
 }
 
 export default function App() {
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<string>("Dashboard");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-
   const [items, setItems] = useState<Item[]>([]);
-  const [claims, setClaims] = useState<ClaimRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'claimed' | 'submissions'>('dashboard');
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+  const [user, setUser] = useState<User | null>(null);
 
-  const [newItem, setNewItem] = useState<CreateItemDTO>({
-    title: "",
-    description: "",
-    location: "",
-    category: "General",
-  });
+  // Form State
+  const [title, setTitle] = useState('');
+  const [location, setLocation] = useState('');
+  const [category, setCategory] = useState('General');
+  const [description, setDescription] = useState('');
 
-  const mockUser: User = {
-    id: "1",
-    name: "Lorenz Allen Biscocho",
-    email: "lorenz_allen_biscocho@dlsl.edu.ph",
-    role: "student",
-    isActive: true,
-  };
+  const API_URL = import.meta.env.VITE_API_URL || 'https://gt-4-fullstack.vercel.app/api';
 
   const fetchItems = async () => {
     try {
       setLoading(true);
-      setError(null);
-
-      const res = await request<any>("/api/items");
-      const rawData = Array.isArray(res) ? res : res?.data || res?.items || [];
-
-      if (Array.isArray(rawData)) {
-        const normalizedItems: Item[] = rawData.map((item: any) => ({
-          ...item,
-          id: item.id || item._id,
-          title: item.title || item.name || "Untitled Item",
-          location: item.location || "Campus Ground",
-          category: item.category || "General",
-        }));
-        setItems(normalizedItems);
-      } else {
-        setItems([]);
+      const res = await fetch(`${API_URL}/items`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setItems(data);
       }
-    } catch (err) {
-      console.error("Fetch error:", err);
-      setError("Unable to connect to backend server. Displaying local state.");
+    } catch (error) {
+      console.error('Failed to fetch items:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchClaims = async () => {
-    try {
-      const res = await request<any>("/api/claims");
-      const rawClaims = Array.isArray(res) ? res : res?.data || res?.claims || [];
-      setClaims(rawClaims);
-    } catch (err) {
-      console.error("Error fetching claims:", err);
-    }
-  };
-
   useEffect(() => {
     fetchItems();
-    fetchClaims();
+
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (err) {
+        console.error('Failed to parse user session:', err);
+      }
+    }
   }, []);
 
-  const handleCreateItem = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!newItem.title || !newItem.description || !newItem.location) return;
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+  };
 
-    const payload = {
-      name: newItem.title,
-      title: newItem.title,
-      description: newItem.description,
-      location: newItem.location,
-      category: newItem.category,
-    };
+  // Improved Update Status Function
+  const handleStatusChange = async (itemId: string, newStatus: string) => {
+    if (!user) {
+      setIsAuthOpen(true);
+      return;
+    }
+
+    // 1. Immediately update UI state
+    setItems((prev) =>
+      prev.map((item) => (item._id === itemId ? { ...item, status: newStatus } : item))
+    );
 
     try {
-      const result = await request<{ success: boolean; data: Item }>("/api/items", {
-        method: "POST",
-        body: JSON.stringify(payload),
+      const token = localStorage.getItem('token');
+      // Format capitalized string for backend compatibility (e.g. "claimed" -> "Claimed")
+      const formattedStatus = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+
+      const res = await fetch(`${API_URL}/items/${itemId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ status: formattedStatus }),
       });
 
-      if (result) {
-        setNewItem({ title: "", description: "", location: "", category: "General" });
-        fetchItems();
+      if (!res.ok) {
+        // Fallback: try lowercase status if server requires lowercase
+        await fetch(`${API_URL}/items/${itemId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
       }
     } catch (err) {
-      console.error("Error creating item:", err);
-      const localItem: Item = {
-        id: String(Date.now()),
-        title: newItem.title,
-        description: newItem.description,
-        location: newItem.location,
-        category: newItem.category,
-        reportedBy: mockUser.id,
-        status: "Unclaimed",
-      };
-      setItems((prev) => [localItem, ...prev]);
-      setNewItem({ title: "", description: "", location: "", category: "General" });
+      console.error('Failed to update status on server:', err);
     }
   };
 
-  const handleClaimItem = async (itemId: string, itemTitle: string) => {
+  const handleReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      setIsAuthOpen(true);
+      return;
+    }
+
     try {
-      await request<{ success: boolean }>("/api/claims", {
-        method: "POST",
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/items`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
-          itemId,
-          claimedBy: mockUser.id,
-          claimDate: new Date().toISOString(),
+          name: title,
+          category,
+          description: `${description} (Location: ${location})`,
+          status: 'unclaimed',
         }),
       });
 
-      alert(`Claim request registered for "${itemTitle}"!`);
-      fetchClaims();
+      if (res.ok) {
+        setTitle('');
+        setLocation('');
+        setDescription('');
+        fetchItems();
+      }
     } catch (err) {
-      console.error("Error claiming item:", err);
-      const newClaim: ClaimRecord = {
-        id: String(Date.now()),
-        itemId,
-        itemTitle,
-        claimedBy: mockUser.id,
-        claimDate: new Date().toISOString(),
-        status: "Pending",
-      };
-      setClaims((prev) => [newClaim, ...prev]);
-      alert(`Claim request registered for "${itemTitle}"!`);
+      console.error('Failed to report item:', err);
     }
   };
 
-  const filteredItems = items.filter((item) => {
+  // Case-Insensitive Filter for Claimed Items Count
+  const claimedCount = items.filter(
+    (i) => i.status && i.status.toLowerCase() === 'claimed'
+  ).length;
+
+  // Filter Items Based on Active Tab & Search Query
+  const displayedItems = items.filter((item) => {
     const matchesSearch =
-      (item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.description || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.location || "").toLowerCase().includes(searchQuery.toLowerCase());
+      item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.description?.toLowerCase().includes(searchTerm.toLowerCase());
 
     if (!matchesSearch) return false;
 
-    if (activeTab === "Claimed") {
-      return claims.some((c) => c.itemId === (item.id || item._id));
+    if (activeTab === 'claimed') {
+      return item.status && item.status.toLowerCase() === 'claimed';
     }
 
     return true;
   });
 
+  const getStatusColor = (status: string = '') => {
+    switch (status.toLowerCase()) {
+      case 'claimed':
+        return { bg: '#dcfce7', text: '#15803d' };
+      case 'pending':
+        return { bg: '#e0f2fe', text: '#0369a1' };
+      case 'unclaimed':
+      default:
+        return { bg: '#fef3c7', text: '#d97706' };
+    }
+  };
+
   return (
-    <div
-      className={`min-h-screen transition-colors ${
-        isDarkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"
-      }`}
-    >
-      {/* Top Header Navigation Bar */}
-      <header
-        className={`border-b px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 ${
-          isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
-        }`}
-      >
-        <div className="flex items-center gap-8">
-          <span className="font-bold text-xl tracking-tight">Lost and Found</span>
-          <nav className="flex gap-2 text-sm font-medium">
-            {["Dashboard", "Claimed", "Submissions", "Login"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  activeTab === tab
-                    ? "bg-blue-600 text-white"
-                    : isDarkMode
-                    ? "text-gray-300 hover:text-white"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                {tab === "Claimed" ? `Claimed Items (${claims.length})` : tab}
+    <div style={{ fontFamily: 'sans-serif', backgroundColor: '#f9fafb', minHeight: '100vh', color: '#111827' }}>
+      {/* Navbar */}
+      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 32px', backgroundColor: '#fff', borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ fontWeight: 'bold', fontSize: '20px' }}>Lost and Found</div>
+
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            style={{
+              backgroundColor: activeTab === 'dashboard' ? '#2563eb' : 'transparent',
+              color: activeTab === 'dashboard' ? '#fff' : '#4b5563',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontWeight: '500',
+              cursor: 'pointer',
+            }}
+          >
+            Dashboard
+          </button>
+
+          <button
+            onClick={() => setActiveTab('claimed')}
+            style={{
+              backgroundColor: activeTab === 'claimed' ? '#2563eb' : 'transparent',
+              color: activeTab === 'claimed' ? '#fff' : '#4b5563',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontWeight: '500',
+              cursor: 'pointer',
+            }}
+          >
+            Claimed Items ({claimedCount})
+          </button>
+
+          <button
+            onClick={() => setActiveTab('submissions')}
+            style={{
+              backgroundColor: activeTab === 'submissions' ? '#2563eb' : 'transparent',
+              color: activeTab === 'submissions' ? '#fff' : '#4b5563',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontWeight: '500',
+              cursor: 'pointer',
+            }}
+          >
+            Submissions
+          </button>
+
+          {user ? (
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginLeft: '8px' }}>
+              <span style={{ fontWeight: '500' }}>Hi, {user.name || user.email}</span>
+              <button onClick={handleLogout} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#dc2626', fontWeight: '500' }}>
+                Logout
               </button>
-            ))}
-          </nav>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAuthOpen(true)}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#374151', fontSize: '15px', fontWeight: '500', marginLeft: '8px' }}
+            >
+              Login
+            </button>
+          )}
         </div>
 
-        <button
-          onClick={() => setIsDarkMode(!isDarkMode)}
-          className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
-            isDarkMode
-              ? "bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
-              : "bg-gray-900 border-gray-900 text-white hover:bg-gray-800"
-          }`}
-        >
-          {isDarkMode ? "Light Mode" : "Dark Mode"}
+        <button style={{ backgroundColor: '#111827', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}>
+          Dark Mode
         </button>
-      </header>
+      </nav>
 
       {/* Main Content Area */}
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold">{activeTab}</h1>
-          <p className="text-gray-500 text-sm">
-            Total Items: {filteredItems.length}
-          </p>
-        </div>
+      <main style={{ maxWidth: '1000px', margin: '32px auto', padding: '0 16px' }}>
+        <h1 style={{ fontSize: '36px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'capitalize' }}>
+          {activeTab === 'dashboard' ? 'Dashboard' : activeTab === 'claimed' ? 'Claimed Items' : 'Submissions'}
+        </h1>
+        <p style={{ color: '#6b7280', marginBottom: '16px' }}>Total Items: {displayedItems.length}</p>
 
-        {/* Search Input Bar */}
-        <div>
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full p-3 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              isDarkMode
-                ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400"
-                : "bg-white border-gray-200 text-gray-900 placeholder-gray-400"
-            }`}
-          />
-        </div>
+        {/* Search Bar */}
+        <input
+          type="text"
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e5e7eb', marginBottom: '24px', outline: 'none', backgroundColor: '#fff', boxSizing: 'border-box' }}
+        />
 
-        {/* Item Cards Stacked Layout */}
-        <div className="space-y-3">
-          {loading && <p className="text-gray-400 text-sm">Loading items...</p>}
-          {error && <p className="text-amber-500 text-sm">{error}</p>}
+        {/* Items Grid */}
+        {loading ? (
+          <p style={{ color: '#9ca3af', marginBottom: '24px' }}>Loading items...</p>
+        ) : displayedItems.length === 0 ? (
+          <p style={{ color: '#9ca3af', marginBottom: '24px' }}>No items found in this section.</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+            {displayedItems.map((item) => {
+              const statusColor = getStatusColor(item.status);
+              return (
+                <div key={item._id} style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>{item.name}</h3>
 
-          {!loading && filteredItems.length === 0 && (
-            <div
-              className={`p-6 rounded-lg border text-center text-gray-400 text-sm ${
-                isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
-              }`}
-            >
-              No items found.
-            </div>
-          )}
-
-          {filteredItems.map((item) => {
-            const isClaimed = claims.some((c) => c.itemId === (item.id || item._id));
-            return (
-              <div
-                key={item.id || item._id}
-                className={`p-5 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-shadow hover:shadow-sm ${
-                  isDarkMode
-                    ? "bg-gray-800 border-gray-700"
-                    : "bg-white border-gray-200"
-                }`}
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-3">
-                    <h2 className="font-bold text-base">{item.title}</h2>
-                    {isClaimed && (
-                      <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-medium">
-                        Claimed
-                      </span>
-                    )}
+                    {/* Interactive Status Selector */}
+                    <select
+                      value={(item.status || 'unclaimed').toLowerCase()}
+                      onChange={(e) => handleStatusChange(item._id, e.target.value)}
+                      style={{
+                        fontSize: '12px',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        backgroundColor: statusColor.bg,
+                        color: statusColor.text,
+                        fontWeight: 'bold',
+                        border: 'none',
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="unclaimed">unclaimed</option>
+                      <option value="pending">pending</option>
+                      <option value="claimed">claimed</option>
+                    </select>
                   </div>
-                  <p className="text-xs text-gray-400">
-                    {item.category || "IT4B"} • 📍 {item.location}
-                  </p>
-                  <p className="text-sm text-gray-500">{item.description}</p>
+                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 8px 0' }}>Category: {item.category}</p>
+                  <p style={{ fontSize: '14px', color: '#374151', margin: 0 }}>{item.description}</p>
                 </div>
+              );
+            })}
+          </div>
+        )}
 
-                <button
-                  onClick={() =>
-                    handleClaimItem(item.id || item._id || "", item.title || "Item")
-                  }
-                  className={`px-4 py-2 text-xs font-semibold rounded-md transition-colors whitespace-nowrap ${
-                    isClaimed
-                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-                >
-                  {isClaimed ? "Claimed ✓" : "Claim Item"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        {/* Report Form Container */}
+        {activeTab !== 'claimed' && (
+          <div style={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px' }}>Report Lost / Found Item</h2>
 
-        {/* Report New Item Form */}
-        <div
-          className={`p-6 rounded-lg border space-y-4 ${
-            isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
-          }`}
-        >
-          <h2 className="text-lg font-bold">Report Lost / Found Item</h2>
-          <form onSubmit={handleCreateItem} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Item Title"
-              value={newItem.title}
-              onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
-              className={`w-full p-2.5 rounded border text-sm focus:outline-none ${
-                isDarkMode
-                  ? "bg-gray-700 border-gray-600 text-white"
-                  : "bg-gray-50 border-gray-200 text-gray-900"
-              }`}
-              required
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <form onSubmit={handleReportSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <input
                 type="text"
-                placeholder="Location Found/Lost"
-                value={newItem.location}
-                onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
-                className={`w-full p-2.5 rounded border text-sm focus:outline-none ${
-                  isDarkMode
-                    ? "bg-gray-700 border-gray-600 text-white"
-                    : "bg-gray-50 border-gray-200 text-gray-900"
-                }`}
+                placeholder="Item Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                style={{ padding: '12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none' }}
                 required
               />
-              <select
-                value={newItem.category}
-                onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
-                className={`w-full p-2.5 rounded border text-sm focus:outline-none ${
-                  isDarkMode
-                    ? "bg-gray-700 border-gray-600 text-white"
-                    : "bg-gray-50 border-gray-200 text-gray-900"
-                }`}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <input
+                  type="text"
+                  placeholder="Location Found/Lost"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  style={{ padding: '12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none' }}
+                  required
+                />
+
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  style={{ padding: '12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none' }}
+                >
+                  <option value="General">General</option>
+                  <option value="Electronics">Electronics</option>
+                  <option value="Personal Items">Personal Items</option>
+                  <option value="Clothing">Clothing</option>
+                </select>
+              </div>
+
+              <textarea
+                placeholder="Description"
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                style={{ padding: '12px', borderRadius: '6px', border: '1px solid #e5e7eb', outline: 'none', resize: 'vertical' }}
+                required
+              />
+
+              <button
+                type="submit"
+                style={{ backgroundColor: '#2563eb', color: '#fff', padding: '10px 20px', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', width: 'fit-content' }}
               >
-                <option value="General">General</option>
-                <option value="Electronics">Electronics</option>
-                <option value="Personal Items">Personal Items</option>
-                <option value="Documents">Documents</option>
-              </select>
-            </div>
-            <textarea
-              placeholder="Description"
-              value={newItem.description}
-              onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-              className={`w-full p-2.5 rounded border text-sm focus:outline-none ${
-                isDarkMode
-                  ? "bg-gray-700 border-gray-600 text-white"
-                  : "bg-gray-50 border-gray-200 text-gray-900"
-              }`}
-              rows={2}
-              required
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white font-medium text-sm rounded hover:bg-blue-700 transition-colors"
-            >
-              Report Item
-            </button>
-          </form>
-        </div>
+                Report Item
+              </button>
+            </form>
+          </div>
+        )}
       </main>
+
+      {/* Auth Modal Component */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onAuthSuccess={(userData: User) => setUser(userData)}
+      />
     </div>
   );
 }
