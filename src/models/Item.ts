@@ -1,4 +1,4 @@
-import { Schema, model, models, Types } from "mongoose";
+import { Schema, model, models } from "mongoose";
 import type { ItemDoc } from "../types/index";
 
 const itemSchema = new Schema<ItemDoc>(
@@ -32,7 +32,7 @@ const itemSchema = new Schema<ItemDoc>(
       default: "Unclaimed",
     },
     reportedBy: { 
-      type: Schema.Types.ObjectId, 
+      type: Schema.Types.ObjectId as any, 
       ref: "User",
       required: true 
     },
