@@ -29,7 +29,7 @@ export default function App() {
   const [category, setCategory] = useState('General');
   const [description, setDescription] = useState('');
 
-  // Fixed API base URL (removed trailing /api to match Express routes)
+  // Fixed API base URL
   const API_URL = (import.meta as any).env?.VITE_API_URL || 'https://gt-4-fullstack.vercel.app';
 
   const fetchItems = async () => {
@@ -66,14 +66,12 @@ export default function App() {
     setUser(null);
   };
 
-  // Update Status Function targeting backend PATCH route
   const handleStatusChange = async (itemId: string, newStatus: string) => {
     if (!user) {
       setIsAuthOpen(true);
       return;
     }
 
-    // 1. Optimistically update UI state
     setItems((prev) =>
       prev.map((item) => (item._id === itemId ? { ...item, status: newStatus } : item))
     );
@@ -91,7 +89,7 @@ export default function App() {
 
       if (!res.ok) {
         console.error('Failed to update status on server');
-        fetchItems(); // Rollback/refetch on failure
+        fetchItems();
       }
     } catch (err) {
       console.error('Failed to update status on server:', err);
@@ -99,22 +97,14 @@ export default function App() {
     }
   };
 
-  // Enhanced Submission Handler with Error Reporting
   const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!user) {
-      setIsAuthOpen(true);
-      return;
-    }
-
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/items`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           name: title,
@@ -133,20 +123,18 @@ export default function App() {
       } else {
         const errorData = await res.json().catch(() => null);
         console.error('Server returned an error:', res.status, errorData);
-        alert(`Error: ${errorData?.message || `Failed to create item (${res.status})`}`);
+        alert(`Error (${res.status}): ${errorData?.message || 'Failed to create item'}`);
       }
     } catch (err) {
       console.error('Failed to report item:', err);
-      alert('Unable to connect to the server. Check network connection or API URL.');
+      alert('Unable to connect to the backend server.');
     }
   };
 
-  // Case-Insensitive Filter for Claimed Items Count
   const claimedCount = items.filter(
     (i) => i.status && i.status.toLowerCase() === 'claimed'
   ).length;
 
-  // Filter Items Based on Active Tab & Search Query
   const displayedItems = items.filter((item) => {
     const matchesSearch =
       item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -277,7 +265,6 @@ export default function App() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>{item.name}</h3>
 
-                    {/* Interactive Status Selector */}
                     <select
                       value={(item.status || 'unclaimed').toLowerCase()}
                       onChange={(e) => handleStatusChange(item._id, e.target.value)}
@@ -363,7 +350,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Auth Modal Component */}
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
