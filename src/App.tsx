@@ -29,8 +29,8 @@ export default function App() {
   const [category, setCategory] = useState('General');
   const [description, setDescription] = useState('');
 
-  // Fixed line for Vite env types
-  const API_URL = (import.meta as any).env?.VITE_API_URL || 'https://gt-4-fullstack.vercel.app/api';
+  // Fixed API base URL (removed trailing /api to match Express routes)
+  const API_URL = (import.meta as any).env?.VITE_API_URL || 'https://gt-4-fullstack.vercel.app';
 
   const fetchItems = async () => {
     try {
@@ -66,50 +66,43 @@ export default function App() {
     setUser(null);
   };
 
-  // Improved Update Status Function
+  // Update Status Function targeting backend PATCH route
   const handleStatusChange = async (itemId: string, newStatus: string) => {
     if (!user) {
       setIsAuthOpen(true);
       return;
     }
 
-    // 1. Immediately update UI state
+    // 1. Optimistically update UI state
     setItems((prev) =>
       prev.map((item) => (item._id === itemId ? { ...item, status: newStatus } : item))
     );
 
     try {
       const token = localStorage.getItem('token');
-      // Format capitalized string for backend compatibility (e.g. "claimed" -> "Claimed")
-      const formattedStatus = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
-
       const res = await fetch(`${API_URL}/items/${itemId}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ status: formattedStatus }),
+        body: JSON.stringify({ status: newStatus }),
       });
 
       if (!res.ok) {
-        // Fallback: try lowercase status if server requires lowercase
-        await fetch(`${API_URL}/items/${itemId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ status: newStatus }),
-        });
+        console.error('Failed to update status on server');
+        fetchItems(); // Rollback/refetch on failure
       }
     } catch (err) {
       console.error('Failed to update status on server:', err);
+      fetchItems();
     }
   };
 
+  // Enhanced Submission Handler with Error Reporting
   const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!user) {
       setIsAuthOpen(true);
       return;
@@ -135,10 +128,16 @@ export default function App() {
         setTitle('');
         setLocation('');
         setDescription('');
-        fetchItems();
+        await fetchItems();
+        alert('Item successfully reported!');
+      } else {
+        const errorData = await res.json().catch(() => null);
+        console.error('Server returned an error:', res.status, errorData);
+        alert(`Error: ${errorData?.message || `Failed to create item (${res.status})`}`);
       }
     } catch (err) {
       console.error('Failed to report item:', err);
+      alert('Unable to connect to the server. Check network connection or API URL.');
     }
   };
 
