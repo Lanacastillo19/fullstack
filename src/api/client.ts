@@ -1,4 +1,4 @@
-import type { ClaimStatus } from "../types/index";
+import type { ClaimStatus, AiListing } from "../types/index";
 
 export interface Item {
   id: string;
@@ -24,6 +24,9 @@ export interface ClaimRecord {
 export type NewClaim = Omit<ClaimRecord, "id">;
 
 const BASE_URL = "http://127.0.0.1:3002";
+
+// GT5: the AI route lives on the real backend, not on json-server.
+const AI_BASE_URL = "https://gt-4-fullstack.vercel.app";
 
 export const api = {
   // Items API Methods
@@ -87,3 +90,29 @@ export const api = {
     }));
   },
 };
+
+// GT5: ask Gemini (through the backend) to turn a rough description
+// into a listing. The token is the one the login popup saved in
+// localStorage, the same place App.tsx reads it from. Every failure becomes an Error carrying the
+// backend's own message (400, 401, 429 and 502 all send one).
+export async function askAi(prompt: string): Promise<AiListing> {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(`${AI_BASE_URL}/api/ai`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ prompt }),
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as {
+      message?: string;
+    } | null;
+    throw new Error(body?.message ?? `Request failed (${res.status})`);
+  }
+
+  return (await res.json()) as AiListing;
+}

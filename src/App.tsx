@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import AuthModal from './AuthModal';
+import ListingAssistantPage from './pages/ListingAssistantPage';
 
 interface Item {
   _id: string;
@@ -19,7 +20,7 @@ export default function App() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'claimed' | 'submissions'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'claimed' | 'submissions' | 'assistant'>('dashboard');
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
 
@@ -64,6 +65,7 @@ export default function App() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    setActiveTab('dashboard');
   };
 
   const handleStatusChange = async (itemId: string, newStatus: string) => {
@@ -213,6 +215,28 @@ export default function App() {
             Submissions
           </button>
 
+          <button
+            onClick={() => {
+              // GT5: protected page. Logged out -> login popup instead.
+              if (!user) {
+                setIsAuthOpen(true);
+                return;
+              }
+              setActiveTab('assistant');
+            }}
+            style={{
+              backgroundColor: activeTab === 'assistant' ? '#2563eb' : 'transparent',
+              color: activeTab === 'assistant' ? '#fff' : '#4b5563',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontWeight: '500',
+              cursor: 'pointer',
+            }}
+          >
+            AI Assistant
+          </button>
+
           {user ? (
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginLeft: '8px' }}>
               <span style={{ fontWeight: '500' }}>Hi, {user.name || user.email}</span>
@@ -237,6 +261,10 @@ export default function App() {
 
       {/* Main Content Area */}
       <main style={{ maxWidth: '1000px', margin: '32px auto', padding: '0 16px' }}>
+        {activeTab === 'assistant' && user ? (
+          <ListingAssistantPage />
+        ) : (
+          <>
         <h1 style={{ fontSize: '36px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'capitalize' }}>
           {activeTab === 'dashboard' ? 'Dashboard' : activeTab === 'claimed' ? 'Claimed Items' : 'Submissions'}
         </h1>
@@ -347,6 +375,8 @@ export default function App() {
               </button>
             </form>
           </div>
+        )}
+          </>
         )}
       </main>
 

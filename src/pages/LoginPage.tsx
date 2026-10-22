@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuthStore } from "../store/authStore";
 
 const loginSchema = z.object({
   email: z
@@ -20,19 +23,52 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+// What POST /api/auth/login sends back.
+interface LoginReply {
+  token: string;
+  user: { name: string; email: string; role: string };
+}
+
+const API_URL = "https://gt-4-fullstack.vercel.app";
+
 export default function LoginPage() {
+  const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
+  const [serverError, setServerError] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = (data: LoginFormValues) => {
-    localStorage.setItem("user", JSON.stringify(data));
-    alert("Signed in successfully!");
-    window.location.href = "/";
+  const onSubmit = async (data: LoginFormValues) => {
+    setServerError(null);
+
+    try {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.email, password: data.password }),
+      });
+
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        setServerError(body?.message ?? "Login failed. Try again.");
+        return;
+      }
+
+      const reply = (await res.json()) as LoginReply;
+      // Real token + user go into the store. The password is never kept.
+      login(reply.user, reply.token);
+      navigate("/");
+    } catch {
+      setServerError("Could not reach the server. Check your connection.");
+    }
   };
 
   return (
@@ -65,8 +101,12 @@ export default function LoginPage() {
           )}
         </div>
 
-        <Button type="submit" className="w-full">
-          Sign In
+        {serverError && (
+          <p className="text-sm text-red-500">{serverError}</p>
+        )}
+
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+          {isSubmitting ? "Signing in..." : "Sign In"}
         </Button>
       </form>
     </div>

@@ -17,12 +17,10 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      user: {
-        name: "Lorenz Allen Biscocho",
-        email: "lorenzallen@gmail.com",
-        role: "student",
-      },
-      token: "mock-jwt-token",
+      // GT5: start logged out. The real user and token come from
+      // POST /api/auth/login (see LoginPage.tsx).
+      user: null,
+      token: null,
       login: (user, token) => set({ user, token }),
       logout: () => set({ user: null, token: null }),
     }),

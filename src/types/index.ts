@@ -42,3 +42,24 @@ export interface Claim {
   status: ClaimStatus;
   createdAt: string;
 }
+
+// GT5: what POST /api/ai sends back. Same 5 fields as the backend's
+// listingSchema in itelect4-backend/src/schemas/listing.ts.
+export type AiCategory =
+  | "electronics"
+  | "clothing"
+  | "accessories"
+  | "bags"
+  | "documents"
+  | "keys"
+  | "other";
+
+export type AiDetailLevel = "detailed" | "vague";
+
+export interface AiListing {
+  title: string;
+  category: AiCategory;
+  tags: string[];
+  missingDetails: string[];
+  detailLevel: AiDetailLevel;
+}

@@ -28,6 +28,7 @@ function Layout() {
           <NavLink to="/" end className={linkClass}>Dashboard</NavLink>
           <NavLink to="/items" className={linkClass}>Items</NavLink>
           <NavLink to="/claims" className={linkClass}>Claims</NavLink>
+          <NavLink to="/assistant" className={linkClass}>AI Assistant</NavLink>
 
           {userName === null ? (
             <NavLink to="/login" className={linkClass}>Login</NavLink>
