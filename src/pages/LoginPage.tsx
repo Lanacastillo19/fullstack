@@ -22,6 +22,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      // Calls https://backend-21o5.vercel.app/api/auth/login via client helper
       const data = await request<{ token?: string; user?: { name: string }; message?: string }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ email: name, username: name, name }),
