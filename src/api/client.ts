@@ -1,7 +1,6 @@
 // src/api/client.ts
 import type { Course, Submission, AiReview, User } from "../types/index";
 
-// Base backend URL configuration
 const RAW_API_URL = import.meta.env.VITE_API_URL || "https://backend-21o5.vercel.app";
 const API_URL = RAW_API_URL.replace(/\/$/, "");
 
@@ -17,8 +16,13 @@ export async function request<T>(endpoint: string, options: RequestInit = {}): P
   }
 
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-  // Ensure the full endpoint route begins with /api if not already included
-  const path = cleanEndpoint.startsWith("/api") ? cleanEndpoint : `/api${cleanEndpoint}`;
+  
+  // Strip duplicate /api prefixes if API_URL or cleanEndpoint already contains it
+  let path = cleanEndpoint;
+  if (!API_URL.endsWith("/api") && !path.startsWith("/api")) {
+    path = `/api${path}`;
+  }
+
   const url = `${API_URL}${path}`;
 
   try {
