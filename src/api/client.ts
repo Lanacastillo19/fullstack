@@ -1,7 +1,8 @@
 // src/api/client.ts
-import type { Course, Submission, AiReview } from "../types/index";
-// Always fall back to the production Vercel backend
-const RAW_API_URL = import.meta.env.VITE_API_URL || "https://backend-21o5.vercel.app/api";
+import type { Course, Submission, AiReview, User } from "../types/index";
+
+// Base backend URL configuration
+const RAW_API_URL = import.meta.env.VITE_API_URL || "https://backend-21o5.vercel.app";
 const API_URL = RAW_API_URL.replace(/\/$/, "");
 
 export async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -16,29 +17,48 @@ export async function request<T>(endpoint: string, options: RequestInit = {}): P
   }
 
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-  const url = `${API_URL}${cleanEndpoint}`;
+  // Ensure the full endpoint route begins with /api if not already included
+  const path = cleanEndpoint.startsWith("/api") ? cleanEndpoint : `/api${cleanEndpoint}`;
+  const url = `${API_URL}${path}`;
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    const errorMessage =
-      errorData?.message ||
-      errorData?.error ||
-      `API error: ${response.status} ${response.statusText}`;
-      
-    throw new Error(errorMessage);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      const errorMessage =
+        errorData?.message ||
+        errorData?.error ||
+        `API error: ${response.status} ${response.statusText}`;
+        
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  } catch (err: any) {
+    if (err.name === "TypeError" && err.message === "Failed to fetch") {
+      throw new Error("Unable to reach backend server. Please check your network connection.");
+    }
+    throw err;
   }
-
-  return response.json();
 }
 
-// Exported API Methods required by your components
+// Authentication API methods
+export async function login(email: string): Promise<{ token: string; user: User }> {
+  return request<{ token: string; user: User }>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+// Course API methods
 export const fetchCourses = () => request<Course[]>("/courses");
 export const fetchCourseByCode = (code: string) => request<Course>(`/courses/${code}`);
+
+// Submission API methods
 export const fetchSubmissions = () => request<Submission[]>("/submissions");
 export const createSubmission = (data: Partial<Submission>) =>
   request<Submission>("/submissions", {
@@ -46,6 +66,7 @@ export const createSubmission = (data: Partial<Submission>) =>
     body: JSON.stringify(data),
   });
 
+// AI Review API method
 export function askAi(prompt: string): Promise<AiReview> {
   return request<AiReview>("/ai", {
     method: "POST",
