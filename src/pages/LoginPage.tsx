@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+// Always fall back to your live Vercel backend URL
+const RAW_API_URL = import.meta.env.VITE_API_URL || "https://backend-21o5.vercel.app/api";
+const API_URL = RAW_API_URL.replace(/\/$/, "");
 
 export default function LoginPage() {
   const [name, setName] = useState("");
@@ -23,10 +25,15 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      // Ensures the endpoint resolves to https://backend-21o5.vercel.app/api/auth/login
+      const endpoint = API_URL.endsWith("/api")
+        ? `${API_URL}/auth/login`
+        : `${API_URL}/api/auth/login`;
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: name, name }),
+        body: JSON.stringify({ email: name, username: name, name }),
       });
 
       const data = await response.json();

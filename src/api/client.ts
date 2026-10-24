@@ -1,8 +1,11 @@
 // src/api/client.ts
 import type { Course, Submission, AiReview } from "../types";
 
-// Fallback points to local backend running on port 4000
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+// Always fall back to the live production backend URL
+const RAW_API_URL = import.meta.env.VITE_API_URL || "https://backend-21o5.vercel.app/api";
+
+// Ensure the base URL does not have a trailing slash
+const API_URL = RAW_API_URL.replace(/\/$/, "");
 
 export async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem("token");
@@ -15,7 +18,11 @@ export async function request<T>(endpoint: string, options: RequestInit = {}): P
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  // Ensures endpoint starts with a leading slash
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const url = `${API_URL}${cleanEndpoint}`;
+
+  const response = await fetch(url, {
     ...options,
     headers,
   });
