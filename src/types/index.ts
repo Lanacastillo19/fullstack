@@ -89,3 +89,11 @@ export type UserRole = Role;
 
 export type ApiSubmission = Submission;
 export type NewSubmission = Omit<Submission, "_id" | "id">;
+
+// ===== SESSION 11: AI REVIEW TYPE =====
+export interface AiReview {
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+  readiness: "ready" | "almost" | "not-yet";
+}

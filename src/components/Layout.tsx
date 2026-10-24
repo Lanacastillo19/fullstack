@@ -9,9 +9,9 @@ function Layout() {
   const userName = useAuthStore((state) => state.userName);
   const logout = useAuthStore((state) => state.logout);
 
-  const base = "rounded px-3 py-1.5 text-sm";
+  const base = "rounded px-3 py-1.5 text-sm transition-colors";
   const activeLink = `${base} bg-blue-600 font-semibold text-white`;
-  const idleLink = `${base} text-gray-700 hover:bg-gray-200 dark:text-gray-300`;
+  const idleLink = `${base} text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-slate-800`;
 
   const linkClass = ({ isActive }: { isActive: boolean }): string =>
     isActive ? activeLink : idleLink;
@@ -32,10 +32,20 @@ function Layout() {
         <NavLink to="/courses" className={linkClass}>
           Courses
         </NavLink>
-        <NavLink to="/submissions" className={linkClass}>
-          Submissions
-        </NavLink>
 
+        {/* Protected Nav Links: Only visible when logged in */}
+        {userName !== null && (
+          <>
+            <NavLink to="/submissions" className={linkClass}>
+              Submissions
+            </NavLink>
+            <NavLink to="/review" className={linkClass}>
+              AI Review
+            </NavLink>
+          </>
+        )}
+
+        {/* Auth Action */}
         {userName === null ? (
           <NavLink to="/login" className={linkClass}>
             Login
@@ -43,12 +53,13 @@ function Layout() {
         ) : (
           <button
             onClick={logout}
-            className="rounded px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300"
+            className="rounded px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-slate-800"
           >
             Logout ({userName})
           </button>
         )}
 
+        {/* Theme Toggle */}
         <button
           onClick={toggleDarkMode}
           className="ml-auto rounded bg-gray-800 px-3 py-1.5 text-sm text-white dark:bg-gray-200 dark:text-gray-900"

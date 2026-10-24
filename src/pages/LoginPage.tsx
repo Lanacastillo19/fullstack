@@ -5,16 +5,48 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+
 export default function LoginPage() {
   const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    login(name);
-    navigate("/");
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: name, name }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to log in.");
+      }
+
+      if (data.token) {
+        // Pass both user name and backend-signed JWT token
+        login(data.user?.name || name, data.token);
+        navigate("/");
+      } else {
+        throw new Error("No token returned from server.");
+      }
+    } catch (err: any) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -22,18 +54,21 @@ export default function LoginPage() {
       <h2 className="text-xl font-bold text-slate-900 dark:text-white">Login</h2>
       <form onSubmit={handleLogin} className="mt-4 space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="username">Name / Username</Label>
+          <Label htmlFor="username">Email / Username</Label>
           <Input
             id="username"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Enter your name..."
+            placeholder="Enter your email or name..."
             required
           />
         </div>
-        <Button type="submit" className="w-full">
-          Sign In
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <Button type="submit" disabled={loading} className="w-full">
+          {loading ? "Signing in..." : "Sign In"}
         </Button>
       </form>
     </div>

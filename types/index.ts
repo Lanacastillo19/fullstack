@@ -104,3 +104,13 @@ export type Role = typeof Role[keyof typeof Role];
 
 export const UserRole = Role;
 export type UserRole = Role;
+
+// ==========================================
+// ===== SESSION 11 ADDITIONS (GT5) =========
+// ==========================================
+export interface AiReview {
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+  readiness: "ready" | "almost" | "not-yet";
+}
