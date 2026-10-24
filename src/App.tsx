@@ -20,7 +20,7 @@ function App() {
           <Route path="courses/:code" element={<CourseDetailPage />} />
           <Route path="login" element={<LoginPage />} />
 
-          {/* Protected Routes (Require Authentication) */}
+          {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
             <Route path="submissions" element={<SubmissionsPage />} />
             <Route path="review" element={<ReviewPage />} />
