@@ -1,6 +1,5 @@
 // src/api/client.ts
 import type { Course, Submission, AiReview } from "../types/index";
-
 // Always fall back to the production Vercel backend
 const RAW_API_URL = import.meta.env.VITE_API_URL || "https://backend-21o5.vercel.app/api";
 const API_URL = RAW_API_URL.replace(/\/$/, "");

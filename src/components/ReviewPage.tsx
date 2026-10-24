@@ -2,15 +2,16 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { askAi } from "../api/client";
-import type { AiReview } from "../types"; // Import from ../types
+import type { AiReview } from "../types/index";
 import { reviewFormSchema, type ReviewFormValues } from "../schemas/reviewSchema";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
-const READINESS_STYLE: Record<AiReview["readiness"], string> = {
-  "ready": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  "almost": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  "not-yet": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+const READINESS_STYLE: Record<string, string> = {
+  ready: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  almost: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  needs_work: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  not_ready: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 };
 
 export default function ReviewPage() {
@@ -23,13 +24,15 @@ export default function ReviewPage() {
     defaultValues: { prompt: "" },
   });
 
-  const review = useMutation({
+  const review = useMutation<AiReview, Error, string>({
     mutationFn: askAi,
   });
 
   const onSubmit = (values: ReviewFormValues) => {
     review.mutate(values.prompt);
   };
+
+  const readinessKey = review.data?.readiness || "needs_work";
 
   return (
     <div className="max-w-2xl">
@@ -65,28 +68,36 @@ export default function ReviewPage() {
 
       {review.data && (
         <div className="mt-6 grid gap-4 rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-          <span className={`justify-self-start rounded px-2 py-0.5 text-sm font-semibold ${READINESS_STYLE[review.data.readiness]}`}>
-            {review.data.readiness}
+          <span
+            className={`justify-self-start rounded px-2 py-0.5 text-sm font-semibold ${
+              READINESS_STYLE[readinessKey] || READINESS_STYLE["needs_work"]
+            }`}
+          >
+            {review.data.readiness || "needs_work"}
           </span>
           <p className="text-gray-900 dark:text-white">{review.data.summary}</p>
 
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">Strengths</h3>
-            <ul className="list-disc pl-5 text-sm text-gray-700 dark:text-gray-300">
-              {review.data.strengths.map((s: string) => (
-                <li key={s}>{s}</li>
-              ))}
-            </ul>
-          </div>
+          {review.data.strengths && review.data.strengths.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Strengths</h3>
+              <ul className="list-disc pl-5 text-sm text-gray-700 dark:text-gray-300">
+                {review.data.strengths.map((s: string) => (
+                  <li key={s}>{s}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">Before you submit</h3>
-            <ul className="list-disc pl-5 text-sm text-gray-700 dark:text-gray-300">
-              {review.data.improvements.map((s: string) => (
-                <li key={s}>{s}</li>
-              ))}
-            </ul>
-          </div>
+          {review.data.improvements && review.data.improvements.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Before you submit</h3>
+              <ul className="list-disc pl-5 text-sm text-gray-700 dark:text-gray-300">
+                {review.data.improvements.map((s: string) => (
+                  <li key={s}>{s}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>
