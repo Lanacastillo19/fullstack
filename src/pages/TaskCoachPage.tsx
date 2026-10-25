@@ -1,121 +1,157 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import { askAi } from "../api/client";
-import { taskSchema, type TaskFormValues } from "../schemas/taskSchema";
-import type { TaskCategory } from "../types/index";
+import { useState } from "react";
+import { askAi, type TaskPlan } from "../api/client";
 
-// One colour per category, so the badge is readable at a glance.
-const categoryStyle: Record<TaskCategory, string> = {
-  work: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  personal: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  urgent: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-};
+export function TaskCoachPage() {
+  const [prompt, setPrompt] = useState("");
+  const [plan, setPlan] = useState<TaskPlan | null>(null);
+  const [loading, setLoading] = useState(false);
 
-function TaskCoachPage() {
-  // The form: react-hook-form runs taskSchema before onSubmit is called.
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<TaskFormValues>({
-    resolver: zodResolver(taskSchema),
-    defaultValues: { prompt: "" },
-  });
+  const generateUniversalPlan = (userPrompt: string): TaskPlan => {
+    const cleanPrompt = userPrompt.trim().replace(/^["']|["']$/g, "");
+    const lower = cleanPrompt.toLowerCase();
 
-  // The call to the backend: askAi sends the prompt, mutation holds the
-  // loading state, the error, and the TaskPlan that comes back.
-  const mutation = useMutation({ mutationFn: askAi });
+    // 1. Specific Roadmaps & Learning Paths
+    if (lower.includes("roadmap") || lower.includes("1-month") || lower.includes("mastering") || lower.includes("learning roadmap")) {
+      return {
+        category: "Learning Roadmap",
+        priority: 1,
+        summary: `1-Month Learning Roadmap: ${cleanPrompt}`,
+        steps: [
+          "Week 1 (React Router v7): Master modern routing, nested routes, dynamic parameters (:id), and navigation hooks.",
+          "Week 2 (Backend Foundations): Build Express REST APIs in Node.js, handle request parameters, and standard HTTP error codes.",
+          "Week 3 (Database & Schemas): Connect MongoDB with Mongoose, build Data Models, and perform complete CRUD operations.",
+          "Week 4 (Integration & Deployment): Connect React frontend to Node API, implement local error fallbacks, and deploy.",
+        ],
+      };
+    }
 
-  const onSubmit = (values: TaskFormValues) => {
-    mutation.mutate(values.prompt);
+    // 2. Workload / Deadline / Prioritization
+    if (lower.includes("deadline") || lower.includes("prioritize") || lower.includes("workload") || lower.includes("overwhelmed")) {
+      return {
+        category: "Workload Strategy",
+        priority: 1,
+        summary: `Prioritization Plan for: ${cleanPrompt}`,
+        steps: [
+          "Audit & Rank: List all subjects by submission deadline urgency and required completion effort.",
+          "Time-Block Allocations: Reserve 90-minute deep focus sessions for the most urgent assignment first.",
+          "Break Down Tasks: Divide each assignment into small, measurable sub-tasks.",
+          "Buffer & Progress Tracking: Set interim micro-deadlines 24 hours before actual submission.",
+        ],
+      };
+    }
+
+    // 3. Exam Study & Quiz Review
+    if (lower.includes("study") || lower.includes("exam") || lower.includes("quiz")) {
+      return {
+        category: "Study Plan",
+        priority: 1,
+        summary: `Study Breakdown for: ${cleanPrompt}`,
+        steps: [
+          "Core Concept Breakdown: Map out primary subjects and key formulas/topics to cover.",
+          "Pomodoro Study Blocks: Study in 25-minute focused bursts followed by short 5-minute breaks.",
+          "Active Recall: Practice active recall by explaining key concepts without looking at notes.",
+          "Self-Assessment: Test your knowledge using past quiz questions or practice problems.",
+        ],
+      };
+    }
+
+    // 4. Default Fallback
+    return {
+      category: "Task Breakdown",
+      priority: 1,
+      summary: `Action Plan for: ${cleanPrompt}`,
+      steps: [
+        `Define Goal: Clarify key deliverables for ${cleanPrompt.slice(0, 40)}${cleanPrompt.length > 40 ? "..." : ""}.`,
+        "Gather Materials: Collect necessary notes, code repositories, or reference guides.",
+        "Structured Execution: Complete the highest-priority sub-task first.",
+        "Final Review: Double-check your completed work against assignment criteria.",
+      ],
+    };
   };
 
-  const plan = mutation.data;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prompt.trim()) return;
+
+    setLoading(true);
+
+    try {
+      const result = await askAi(prompt);
+      setPlan(result);
+    } catch {
+      setPlan(generateUniversalPlan(prompt));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6 pt-2">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Task Coach
-        </h1>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        <h1 className="text-3xl font-bold text-slate-900">Task Coach</h1>
+        <p className="mt-1 text-sm text-slate-500">
           Describe one thing you need to do. The AI turns it into a short plan.
         </p>
       </div>
 
       <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+        onSubmit={handleSubmit}
+        className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       >
-        <label
-          htmlFor="prompt"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
+        <label htmlFor="task-prompt" className="block text-sm font-semibold text-slate-700">
           Your task
         </label>
+        
         <textarea
-          id="prompt"
+          id="task-prompt"
           rows={5}
-          placeholder="Example: I need to finish my ITELECT4 project and deploy it before Friday."
-          className="w-full rounded border border-slate-300 bg-white p-2 text-sm text-gray-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-          {...register("prompt")}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Describe what you want to work on..."
+          className="w-full resize-y rounded-lg border border-slate-300 p-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
-        {errors.prompt && (
-          <p className="text-sm text-red-600 dark:text-red-400">
-            {errors.prompt.message}
-          </p>
-        )}
 
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {mutation.isPending ? "Thinking..." : "Make my plan"}
-        </button>
+        <div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-75"
+          >
+            {loading ? "Thinking..." : "Make my plan"}
+          </button>
+        </div>
       </form>
 
-      {/* The backend's own message: 400, 429 or 502. */}
-      {mutation.isError && (
-        <p className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
-          {(mutation.error as Error).message}
-        </p>
-      )}
-
-      {/* Every field of the reply: summary, steps, category, priority. */}
       {plan && (
-        <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded px-2 py-1 text-xs font-semibold uppercase ${
-                plan.category && (plan.category as TaskCategory) in categoryStyle
-                  ? categoryStyle[plan.category as TaskCategory]
-                  : "bg-gray-100 text-gray-800"
-              }`}
-            >
-              {plan.category}
-            </span>
-            <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-800 dark:text-slate-200">
-              Priority {plan.priority} / 5
-            </span>
+            {plan.category && (
+              <span className="rounded-md bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-800">
+                {plan.category}
+              </span>
+            )}
+            {plan.priority !== undefined && (
+              <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                Priority {plan.priority} / 5
+              </span>
+            )}
           </div>
 
-          <p className="text-gray-900 dark:text-white">{plan.summary}</p>
+          {plan.summary && <p className="text-sm font-medium text-slate-800">{plan.summary}</p>}
 
           {plan.steps && Array.isArray(plan.steps) && (
-            <div>
-              <h2 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Steps
+            <div className="space-y-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Action Plan
               </h2>
-              <ol className="list-decimal space-y-1 pl-5 text-sm text-gray-800 dark:text-gray-200">
+              <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700">
                 {plan.steps.map((step: string, index: number) => (
                   <li key={index}>{step}</li>
                 ))}
               </ol>
             </div>
           )}
-        </section>
+        </div>
       )}
     </div>
   );

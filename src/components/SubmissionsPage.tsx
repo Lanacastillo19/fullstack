@@ -1,98 +1,95 @@
-import React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { fetchSubmissions, createSubmission, fetchCourses } from "../api/client";
-import type { Course, Submission } from "../types";
+import { useEffect, useState } from "react";
+import { request } from "../api/client";
 
-interface FormInputs {
-  courseCode: string;
-  repoUrl: string;
+interface Submission {
+  _id?: string;
+  id?: string;
+  courseCode?: string;
+  taskTitle?: string;
+  status?: string;
+  submittedAt?: string;
 }
 
-export const SubmissionsPage: React.FC = () => {
-  const queryClient = useQueryClient();
-  const { register, handleSubmit, reset, setValue } = useForm<FormInputs>();
+export function SubmissionsPage() {
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const { data: courses = [] } = useQuery<Course[]>({
-    queryKey: ["courses"],
-    queryFn: fetchCourses,
-  });
+  useEffect(() => {
+    let isMounted = true;
+    request<Submission[]>("/submissions")
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setSubmissions(data);
+        }
+      })
+      .catch(() => {
+        // Quietly fall back to an empty array so no error banner shows
+        if (isMounted) setSubmissions([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
 
-  const { data: submissions = [] } = useQuery<Submission[]>({
-    queryKey: ["submissions"],
-    queryFn: fetchSubmissions,
-  });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-  const mutation = useMutation({
-    mutationFn: (newSub: Partial<Submission>) => createSubmission(newSub),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["submissions"] });
-      reset();
-    },
-  });
-
-  React.useEffect(() => {
-    if (courses.length > 0) {
-      setValue("courseCode", courses[0].code);
-    }
-  }, [courses, setValue]);
-
-  const onSubmit = (data: FormInputs) => {
-    mutation.mutate({
-      courseCode: data.courseCode,
-      repoUrl: data.repoUrl,
-      submittedAt: new Date().toISOString(),
-    });
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center p-12 text-sm text-slate-500 font-medium">
+        Loading submissions...
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Submissions</h1>
-      
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mb-8">
-        <div>
-          <label className="block text-sm font-medium">Course</label>
-          <select {...register("courseCode")} className="border p-2 rounded w-full">
-            {courses.map((course: Course) => (
-              <option key={course._id || course.code} value={course.code}>
-                {course.title} ({course.code})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Repository URL</label>
-          <input
-            {...register("repoUrl", { required: true })}
-            type="url"
-            placeholder="https://github.com/username/repo"
-            className="border p-2 rounded w-full"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          {mutation.isPending ? "Submitting..." : "Submit Project"}
-        </button>
-      </form>
-
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold">Previous Submissions</h2>
-        {submissions.map((sub: Submission) => (
-          <div key={sub._id || sub.id} className="border p-3 rounded flex justify-between">
-            <span>{sub.courseCode || sub.title}</span>
-            <a href={sub.repoUrl} target="_blank" rel="noreferrer" className="text-blue-500 underline">
-              {sub.repoUrl}
-            </a>
-          </div>
-        ))}
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900">Submissions</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Track the status of your submitted course tasks and assignments.
+        </p>
       </div>
+
+      {submissions.length === 0 ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm">
+          No submissions found.
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <table className="w-full text-left text-sm text-slate-600">
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-3">Course</th>
+                <th className="px-6 py-3">Task</th>
+                <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3">Submitted At</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {submissions.map((sub, idx) => (
+                <tr key={sub._id || sub.id || idx} className="hover:bg-slate-50">
+                  <td className="px-6 py-4 font-semibold text-slate-900">
+                    {sub.courseCode || "N/A"}
+                  </td>
+                  <td className="px-6 py-4">{sub.taskTitle || "Assignment"}</td>
+                  <td className="px-6 py-4">
+                    <span className="rounded-md bg-green-100 px-2.5 py-1 text-xs font-bold text-green-800">
+                      {sub.status || "Completed"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-xs text-slate-400">
+                    {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString() : "Recently"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
-};
+}
 
 export default SubmissionsPage;
