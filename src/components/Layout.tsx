@@ -39,8 +39,8 @@ function Layout() {
             <NavLink to="/submissions" className={linkClass}>
               Submissions
             </NavLink>
-            <NavLink to="/review" className={linkClass}>
-              AI Review
+            <NavLink to="/coach" className={linkClass}>
+              Task Coach
             </NavLink>
           </>
         )}

@@ -1,9 +1,12 @@
 // src/api/client.ts
-import type { Course, Submission, AiReview, User } from "../types/index";
+import type { Course, Submission, User } from "../types/index";
 
-// Use empty string to default to relative pathing through Vercel rewrites (CORS proxy)
-const RAW_API_URL = import.meta.env.VITE_API_URL || "";
-const API_URL = RAW_API_URL.replace(/\/$/, "");
+export interface AiReview {
+  review?: string;
+  feedback?: string;
+  suggestion?: string;
+  [key: string]: any;
+}
 
 export async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem("token");
@@ -16,15 +19,11 @@ export async function request<T>(endpoint: string, options: RequestInit = {}): P
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  // Ensure endpoint starts with a single slash
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   
-  // Ensure the request path starts with /api for Vercel rewrites
-  let path = cleanEndpoint;
-  if (!path.startsWith("/api")) {
-    path = `/api${path}`;
-  }
-
-  const url = `${API_URL}${path}`;
+  // Use relative route through Vercel rewrites (/api)
+  const url = `/api${cleanEndpoint}`;
 
   try {
     const response = await fetch(url, {

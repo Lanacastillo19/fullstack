@@ -60,12 +60,15 @@ export interface Submission {
   status?: SubmissionStatus | string;
 }
 
-export interface AiReview {
-  readiness?: "ready" | "needs_work" | "not_ready" | "almost";
-  summary?: string;
-  strengths?: string[];
-  improvements?: string[];
-  [key: string]: any;
+// What POST /api/ai sends back: a short plan for one task.
+// These four fields match the backend's reviewSchema exactly.
+export type TaskCategory = "work" | "personal" | "urgent";
+
+export interface TaskPlan {
+  summary: string;
+  steps: string[];
+  category: TaskCategory;
+  priority: number; // whole number, 1 (can wait) to 5 (do it first)
 }
 
 export interface ApiResponse<T> {

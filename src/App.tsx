@@ -4,7 +4,7 @@ import DashboardPage from "./pages/DashboardPage";
 import CoursesPage from "./pages/CoursesPage";
 import CourseDetailPage from "./pages/CourseDetailPage";
 import SubmissionsPage from "./components/SubmissionsPage";
-import ReviewPage from "./components/ReviewPage";
+import TaskCoachPage from "./pages/TaskCoachPage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -23,7 +23,7 @@ function App() {
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
             <Route path="submissions" element={<SubmissionsPage />} />
-            <Route path="review" element={<ReviewPage />} />
+            <Route path="coach" element={<TaskCoachPage />} />
           </Route>
 
           {/* Fallback 404 Route */}
