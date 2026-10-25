@@ -1,7 +1,8 @@
 // src/api/client.ts
 import type { Course, Submission, AiReview, User } from "../types/index";
 
-const RAW_API_URL = import.meta.env.VITE_API_URL || "https://backend-21o5.vercel.app";
+// Use empty string to default to relative pathing through Vercel rewrites (CORS proxy)
+const RAW_API_URL = import.meta.env.VITE_API_URL || "";
 const API_URL = RAW_API_URL.replace(/\/$/, "");
 
 export async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -17,9 +18,9 @@ export async function request<T>(endpoint: string, options: RequestInit = {}): P
 
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   
-  // Strip duplicate /api prefixes if API_URL or cleanEndpoint already contains it
+  // Ensure the request path starts with /api for Vercel rewrites
   let path = cleanEndpoint;
-  if (!API_URL.endsWith("/api") && !path.startsWith("/api")) {
+  if (!path.startsWith("/api")) {
     path = `/api${path}`;
   }
 
