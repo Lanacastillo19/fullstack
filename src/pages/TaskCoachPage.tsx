@@ -10,38 +10,48 @@ export function TaskCoachPage() {
     const cleanPrompt = userPrompt.trim().replace(/^["']|["']$/g, "");
     const lower = cleanPrompt.toLowerCase();
 
-    // 1. Specific Roadmaps & Learning Paths
-    if (lower.includes("roadmap") || lower.includes("1-month") || lower.includes("mastering") || lower.includes("learning roadmap")) {
+    // 1. Database & DBMS Prompts
+    if (
+      lower.includes("database") ||
+      lower.includes("dbms") ||
+      lower.includes("sql") ||
+      lower.includes("mongodb")
+    ) {
+      return {
+        category: "Database Roadmap",
+        priority: 1,
+        summary: `DBMS Learning Plan for: ${cleanPrompt}`,
+        steps: [
+          "Understand Relational Models: Study entities, attributes, primary keys, and foreign key constraints.",
+          "Master SQL & Queries: Practice writing SELECT, JOIN, GROUP BY, and aggregate query statements.",
+          "Database Normalization: Review 1NF, 2NF, and 3NF rules to eliminate data redundancy.",
+          "Indexing & Performance: Learn how B-Trees and indexing improve database query speeds.",
+        ],
+      };
+    }
+
+    // 2. Specific Roadmaps & Learning Paths
+    if (
+      lower.includes("roadmap") ||
+      lower.includes("1-month") ||
+      lower.includes("mastering") ||
+      lower.includes("learning roadmap")
+    ) {
       return {
         category: "Learning Roadmap",
         priority: 1,
         summary: `1-Month Learning Roadmap: ${cleanPrompt}`,
         steps: [
-          "Week 1 (React Router v7): Master modern routing, nested routes, dynamic parameters (:id), and navigation hooks.",
-          "Week 2 (Backend Foundations): Build Express REST APIs in Node.js, handle request parameters, and standard HTTP error codes.",
-          "Week 3 (Database & Schemas): Connect MongoDB with Mongoose, build Data Models, and perform complete CRUD operations.",
-          "Week 4 (Integration & Deployment): Connect React frontend to Node API, implement local error fallbacks, and deploy.",
-        ],
-      };
-    }
-
-    // 2. Workload / Deadline / Prioritization
-    if (lower.includes("deadline") || lower.includes("prioritize") || lower.includes("workload") || lower.includes("overwhelmed")) {
-      return {
-        category: "Workload Strategy",
-        priority: 1,
-        summary: `Prioritization Plan for: ${cleanPrompt}`,
-        steps: [
-          "Audit & Rank: List all subjects by submission deadline urgency and required completion effort.",
-          "Time-Block Allocations: Reserve 90-minute deep focus sessions for the most urgent assignment first.",
-          "Break Down Tasks: Divide each assignment into small, measurable sub-tasks.",
-          "Buffer & Progress Tracking: Set interim micro-deadlines 24 hours before actual submission.",
+          "Week 1 (React Router v7): Master modern routing, nested routes, and dynamic parameters (:id).",
+          "Week 2 (Backend Foundations): Build Express REST APIs in Node.js and handle HTTP status codes.",
+          "Week 3 (Database & Schemas): Connect MongoDB with Mongoose and construct Data Models.",
+          "Week 4 (Integration & Deployment): Link React frontend with Node backend and deploy to Vercel.",
         ],
       };
     }
 
     // 3. Exam Study & Quiz Review
-    if (lower.includes("study") || lower.includes("exam") || lower.includes("quiz")) {
+    if (lower.includes("study") || lower.includes("exam") || lower.includes("learn")) {
       return {
         category: "Study Plan",
         priority: 1,
