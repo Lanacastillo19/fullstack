@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { request } from "../api/client";
 
 interface Course {
   id?: string;
@@ -28,6 +27,8 @@ const MOCK_COURSES: Course[] = [
   },
 ];
 
+const API_BACKEND_URL = "https://backend-mnio-git-gt5-ai-lana-lee.vercel.app/api/courses";
+
 export function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,11 +38,15 @@ export function CoursesPage() {
 
     async function fetchCourses() {
       try {
-        const data = await request<Course[]>("/courses");
+        const res = await fetch(API_BACKEND_URL);
+        if (!res.ok) throw new Error("Network response was not ok");
+        const data = await res.json();
+
         if (isMounted) {
           setCourses(Array.isArray(data) && data.length > 0 ? data : MOCK_COURSES);
         }
-      } catch {
+      } catch (error) {
+        console.error("Failed to fetch courses, falling back to mock data:", error);
         if (isMounted) setCourses(MOCK_COURSES);
       } finally {
         if (isMounted) setLoading(false);
