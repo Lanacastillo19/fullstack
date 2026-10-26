@@ -7,9 +7,8 @@ import SubmissionsPage from "./components/SubmissionsPage";
 import TaskCoachPage from "./pages/TaskCoachPage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
-import ProtectedRoute from "./components/ProtectedRoute";
 
-function App() {
+export function App() {
   return (
     <BrowserRouter>
       <Routes>
@@ -17,14 +16,10 @@ function App() {
           {/* Public Routes */}
           <Route index element={<DashboardPage />} />
           <Route path="courses" element={<CoursesPage />} />
-          <Route path="courses/:code" element={<CourseDetailPage />} />
+          <Route path="courses/:id" element={<CourseDetailPage />} />
+          <Route path="coach" element={<TaskCoachPage />} />
+          <Route path="submissions" element={<SubmissionsPage />} />
           <Route path="login" element={<LoginPage />} />
-
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="submissions" element={<SubmissionsPage />} />
-            <Route path="coach" element={<TaskCoachPage />} />
-          </Route>
 
           {/* Fallback 404 Route */}
           <Route path="*" element={<NotFoundPage />} />

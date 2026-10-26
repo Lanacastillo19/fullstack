@@ -1,73 +1,65 @@
-import { useEffect } from "react";
-import { NavLink, Outlet } from "react-router";
+import { Link, Outlet, useNavigate } from "react-router";
 import useAuthStore from "../store/authStore";
-import useUiStore from "../store/uiStore";
 
-function Layout() {
-  const isDarkMode = useUiStore((state) => state.isDarkMode);
-  const toggleDarkMode = useUiStore((state) => state.toggleDarkMode);
-  const userName = useAuthStore((state) => state.userName);
-  const logout = useAuthStore((state) => state.logout);
+export function Layout() {
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+  const user = useAuthStore((state: any) => state.user);
+  const logout = useAuthStore((state: any) => state.logout);
 
-  const base = "rounded px-3 py-1.5 text-sm transition-colors";
-  const activeLink = `${base} bg-blue-600 font-semibold text-white`;
-  const idleLink = `${base} text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-slate-800`;
-
-  const linkClass = ({ isActive }: { isActive: boolean }): string =>
-    isActive ? activeLink : idleLink;
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDarkMode);
-  }, [isDarkMode]);
+  const handleLogout = () => {
+    if (logout) logout();
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 transition-colors dark:bg-slate-950">
-      <nav className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white p-4 shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900">
-        <span className="mr-4 font-bold text-gray-900 dark:text-white">
-          Course Portal
-        </span>
-        <NavLink to="/" end className={linkClass}>
-          Dashboard
-        </NavLink>
-        <NavLink to="/courses" className={linkClass}>
-          Courses
-        </NavLink>
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+      {/* Top Navbar */}
+      <header className="border-b border-slate-200 bg-white shadow-sm">
+        <div className="mx-auto flex max-w-7xl items-center px-8 py-4">
+          <Link to="/" className="text-xl font-bold text-slate-900 mr-12">
+            Course Portal
+          </Link>
 
-        {/* Protected Nav Links: Only visible when logged in */}
-        {userName !== null && (
-          <>
-            <NavLink to="/submissions" className={linkClass}>
+          <nav className="flex items-center space-x-8 text-sm font-medium text-slate-600">
+            <Link to="/" className="hover:text-slate-900">
+              Dashboard
+            </Link>
+            <Link to="/courses" className="hover:text-slate-900">
+              Courses
+            </Link>
+            <Link to="/submissions" className="hover:text-slate-900">
               Submissions
-            </NavLink>
-            <NavLink to="/coach" className={linkClass}>
+            </Link>
+            <Link
+              to="/coach"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
               Task Coach
-            </NavLink>
-          </>
-        )}
+            </Link>
 
-        {/* Auth Action */}
-        {userName === null ? (
-          <NavLink to="/login" className={linkClass}>
-            Login
-          </NavLink>
-        ) : (
-          <button
-            onClick={logout}
-            className="rounded px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-slate-800"
-          >
-            Logout ({userName})
-          </button>
-        )}
+            {token ? (
+              <button
+                onClick={handleLogout}
+                className="text-sm font-normal text-slate-600 hover:text-slate-900"
+              >
+                Logout ({user?.username || "lana_lee_castillio"})
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="text-sm font-medium text-slate-600 hover:text-slate-900"
+              >
+                Login
+              </Link>
+            )}
+          </nav>
+        </div>
+      </header>
 
-        {/* Theme Toggle */}
-        <button
-          onClick={toggleDarkMode}
-          className="ml-auto rounded bg-gray-800 px-3 py-1.5 text-sm text-white dark:bg-gray-200 dark:text-gray-900"
-        >
-          {isDarkMode ? "Light Mode" : "Dark Mode"}
-        </button>
-      </nav>
-      <main className="mx-auto max-w-7xl p-5 sm:p-6">
+      {/* Main Content Container */}
+      <main className="mx-auto max-w-7xl p-8">
         <Outlet />
       </main>
     </div>

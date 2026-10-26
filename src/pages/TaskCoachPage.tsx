@@ -1,124 +1,80 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import { askAi } from "../api/client";
-import { taskSchema, type TaskFormValues } from "../schemas/taskSchema";
-import type { TaskCategory } from "../types/index";
+import { useState } from "react";
 
-// One colour per category, so the badge is readable at a glance.
-const categoryStyle: Record<TaskCategory, string> = {
-  work: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  personal: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  urgent: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-};
+export default function TaskCoach() {
+  const [prompt, setPrompt] = useState("");
+  const [plan, setPlan] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
-function TaskCoachPage() {
-  // The form: react-hook-form runs taskSchema before onSubmit is called.
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<TaskFormValues>({
-    resolver: zodResolver(taskSchema),
-    defaultValues: { prompt: "" },
-  });
+  const handleMakePlan = async () => {
+    if (!prompt.trim()) return;
+    setLoading(true);
 
-  // The call to the backend: askAi sends the prompt, mutation holds the
-  // loading state, the error, and the TaskPlan that comes back.
-  const mutation = useMutation({ mutationFn: askAi });
-
-  const onSubmit = (values: TaskFormValues) => {
-    mutation.mutate(values.prompt);
+    try {
+      const res = await fetch("https://backend-mnio.vercel.app/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json();
+      setPlan(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const plan = mutation.data;
-
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="max-w-2xl mx-auto p-4 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Task Coach
-        </h1>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        <h2 className="text-2xl font-bold mb-1">Task Coach</h2>
+        <p className="text-gray-600">
           Describe one thing you need to do. The AI turns it into a short plan.
         </p>
       </div>
 
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900"
-      >
-        <label
-          htmlFor="prompt"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
-          Your task
-        </label>
+      <div className="bg-white p-6 rounded-lg shadow border space-y-4">
+        <label className="block text-sm font-medium">Your task</label>
         <textarea
-          id="prompt"
-          rows={5}
-          placeholder="Example: I need to finish my ITELECT4 project and deploy it before Friday."
-          className="w-full rounded border border-slate-300 bg-white p-2 text-sm text-gray-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-          {...register("prompt")}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Give me a 3-step study plan for my exam"
+          className="w-full p-3 border rounded-md"
+          rows={4}
         />
-        {errors.prompt && (
-          <p className="text-sm text-red-600 dark:text-red-400">
-            {errors.prompt.message}
-          </p>
-        )}
-
         <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          onClick={handleMakePlan}
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
         >
-          {mutation.isPending ? "Thinking..." : "Make my plan"}
+          {loading ? "Generating..." : "Make my plan"}
         </button>
-      </form>
+      </div>
 
-      {/* The backend's own message: 400, 429 or 502. */}
-      {mutation.isError && (
-        <p className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
-          {(mutation.error as Error).message}
-        </p>
-      )}
-
-      {/* Every field of the reply: summary, steps, category, priority. */}
       {plan && (
-        <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded px-2 py-1 text-xs font-semibold uppercase ${
-                plan.category && (plan.category as TaskCategory) in categoryStyle
-                  ? categoryStyle[plan.category as TaskCategory]
-                  : "bg-gray-100 text-gray-800"
-              }`}
-            >
-              {plan.category}
-            </span>
-            <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-800 dark:text-slate-200">
-              Priority {plan.priority} / 5
+        <div className="bg-white p-6 rounded-lg shadow border space-y-4">
+          <div className="flex justify-between items-center border-b pb-3">
+            <h3 className="text-lg font-semibold">{plan.title || "Study Plan"}</h3>
+            <span className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 rounded-full text-xs font-medium">
+              Priority {plan.priority ?? 3} / 5
             </span>
           </div>
 
-          <p className="text-gray-900 dark:text-white">{plan.summary}</p>
-
-          {plan.steps && Array.isArray(plan.steps) && (
-            <div>
-              <h2 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Steps
-              </h2>
-              <ol className="list-decimal space-y-1 pl-5 text-sm text-gray-800 dark:text-gray-200">
-                {plan.steps.map((step: string, index: number) => (
-                  <li key={index}>{step}</li>
-                ))}
-              </ol>
-            </div>
+          {/* Render steps list if present */}
+          {Array.isArray(plan.steps) && plan.steps.length > 0 ? (
+            <ul className="list-disc list-inside space-y-2 text-gray-700">
+              {plan.steps.map((step: string, index: number) => (
+                <li key={index}>{step}</li>
+              ))}
+            </ul>
+          ) : (
+            /* Fallback to raw text or reply if steps array isn't sent */
+            <p className="text-gray-700 whitespace-pre-line">
+              {plan.reply || plan.text || "No steps generated."}
+            </p>
           )}
-        </section>
+        </div>
       )}
     </div>
   );
 }
-
-export default TaskCoachPage;

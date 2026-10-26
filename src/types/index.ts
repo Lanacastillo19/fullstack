@@ -60,8 +60,7 @@ export interface Submission {
   status?: SubmissionStatus | string;
 }
 
-// What POST /api/ai sends back: a short plan for one task.
-// These four fields match the backend's reviewSchema exactly.
+// Legacy Task Plan Interface
 export type TaskCategory = "work" | "personal" | "urgent";
 
 export interface TaskPlan {
@@ -69,6 +68,15 @@ export interface TaskPlan {
   steps: string[];
   category: TaskCategory;
   priority: number; // whole number, 1 (can wait) to 5 (do it first)
+}
+
+// Listing Assistant AI Suggestion Interface
+export interface ListingSuggestion {
+  title: string;
+  category: string;
+  readiness: "Ready" | "Vague" | "Incomplete";
+  tags: string[];
+  detailsToAdd: string[];
 }
 
 export interface ApiResponse<T> {
