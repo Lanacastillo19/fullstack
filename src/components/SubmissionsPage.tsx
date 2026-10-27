@@ -145,7 +145,7 @@ export function Submissions() {
                     ))
                   : INITIAL_COURSES.map((course) => (
                       <option key={course.code} value={course.code}>
-                        {course.code} - {course.title}
+                        {`${course.code} - ${course.title}`}
                       </option>
                     ))}
               </select>
