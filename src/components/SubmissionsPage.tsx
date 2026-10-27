@@ -7,6 +7,7 @@ interface Submission {
   repoUrl: string;
   status?: string;
   createdAt?: string;
+  submittedAt?: string;
 }
 
 interface Course {
@@ -64,7 +65,9 @@ export function Submissions() {
 
       if (submissionsRes.ok) {
         const submissionsData = await submissionsRes.json();
-        setSubmissions(submissionsData);
+        if (Array.isArray(submissionsData)) {
+          setSubmissions(submissionsData);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch data:", err);
@@ -95,7 +98,10 @@ export function Submissions() {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to post submission");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.message || "Failed to post submission");
+      }
 
       const savedSubmission = await response.json();
       setSubmissions((prev) => [savedSubmission, ...prev]);
@@ -103,9 +109,9 @@ export function Submissions() {
       // Reset input fields
       setTitle("");
       setRepoUrl("");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving submission:", err);
-      setError("Failed to save to database. Check backend connection.");
+      setError(err.message || "Failed to save to database. Check backend connection.");
     } finally {
       setSubmitting(false);
     }
@@ -240,7 +246,9 @@ export function Submissions() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
-                      {sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : "Just now"}
+                      {sub.createdAt || sub.submittedAt
+                        ? new Date(sub.createdAt || sub.submittedAt!).toLocaleDateString()
+                        : "Just now"}
                     </td>
                   </tr>
                 ))}
