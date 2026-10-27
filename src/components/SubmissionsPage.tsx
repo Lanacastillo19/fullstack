@@ -23,7 +23,6 @@ const INITIAL_COURSES = [
   { code: "ITE401", title: "Full-Stack Web Development" },
   { code: "NET501", title: "Computer Networking" },
   { code: "SE601", title: "Software Engineering" },
-  // ADD NEW SUBJECTS HERE:
   { code: "CYBER701", title: "Cybersecurity Fundamentals" },
   { code: "AI801", title: "Artificial Intelligence" },
   { code: "DATA901", title: "Data Science & Analytics" },
