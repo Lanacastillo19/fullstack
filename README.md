@@ -3,7 +3,7 @@
 A React application built with TypeScript and Vite that connects to a deployed REST API for managing course and subject data.
 
 ## Deployment Links
-- **Live Frontend:** https://fullstack-hgto.vercel.app
+- **Live Frontend:**https://fullstack-hgto.vercel.app
 - **Live Backend API:** https://backend-21o5.vercel.app
 
 ---
