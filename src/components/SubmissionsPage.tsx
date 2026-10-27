@@ -41,7 +41,8 @@ export function Submissions() {
   const [title, setTitle] = useState<string>("");
   const [repoUrl, setRepoUrl] = useState<string>("");
 
-  const API_URL = import.meta.env.VITE_API_URL || "https://backend-21o5.vercel.app";
+  // Updated to point directly to your live Vercel backend deployment
+  const API_URL = import.meta.env.VITE_API_URL || "https://backend-21o5-19klxtecf-lana-lee.vercel.app";
 
   useEffect(() => {
     fetchData();
