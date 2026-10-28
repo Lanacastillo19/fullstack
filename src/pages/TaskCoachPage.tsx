@@ -1,12 +1,19 @@
 import { useState } from "react";
+import { taskSchema } from "../schemas/taskSchema";
 
 export default function TaskCoach() {
   const [prompt, setPrompt] = useState("");
   const [plan, setPlan] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleMakePlan = async () => {
-    if (!prompt.trim()) return;
+    const result = taskSchema.safeParse({ prompt });
+    if (!result.success) {
+      setError(result.error.issues[0].message);
+      return; // stop here, so no request is sent
+    }
+    setError(null);
     setLoading(true);
 
     try {
@@ -34,14 +41,18 @@ export default function TaskCoach() {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow border space-y-4">
-        <label className="block text-sm font-medium">Your task</label>
+        <label htmlFor="task-prompt" className="block text-sm font-medium">
+          Your task
+        </label>
         <textarea
+          id="task-prompt"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="Give me a 3-step study plan for my exam"
           className="w-full p-3 border rounded-md"
           rows={4}
         />
+        {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           onClick={handleMakePlan}
           disabled={loading}
@@ -60,7 +71,6 @@ export default function TaskCoach() {
             </span>
           </div>
 
-          {/* Render steps list if present */}
           {Array.isArray(plan.steps) && plan.steps.length > 0 ? (
             <ul className="list-disc list-inside space-y-2 text-gray-700">
               {plan.steps.map((step: string, index: number) => (
@@ -68,7 +78,6 @@ export default function TaskCoach() {
               ))}
             </ul>
           ) : (
-            /* Fallback to raw text or reply if steps array isn't sent */
             <p className="text-gray-700 whitespace-pre-line">
               {plan.reply || plan.text || "No steps generated."}
             </p>
