@@ -1,0 +1,28 @@
+name: CI
+
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Copies the repo at the pushed commit onto GitHub's machine
+      - uses: actions/checkout@v4
+
+      # Installs Node and caches npm's downloads
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # Installs exactly what package-lock.json lists
+      # (node_modules is not in the repo)
+      - run: npm ci
+
+      # Type check, no output files
+      - run: npx tsc -b
+
+      # The three test files. No secrets needed: vite.config.ts gives
+      # the tests their own VITE_API_URL
+      - run: npm test
