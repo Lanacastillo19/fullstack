@@ -41,8 +41,8 @@ export function Submissions() {
   const [title, setTitle] = useState<string>("");
   const [repoUrl, setRepoUrl] = useState<string>("");
 
-  // Updated fallback URL to match active backend deployment hash
-  const API_URL = import.meta.env.VITE_API_URL || "https://backend-21o5-5re6ormyx-lana-lee.vercel.app";
+  // Pointing to live main backend production domain
+  const API_URL = import.meta.env.VITE_API_URL || "https://backend-21o5.vercel.app";
 
   useEffect(() => {
     fetchData();
@@ -99,13 +99,16 @@ export function Submissions() {
         }),
       });
 
+      const data = await response.json().catch(() => null);
+
       if (!response.ok) {
-        const errData = await response.json().catch(() => null);
-        throw new Error(errData?.message || "Failed to post submission");
+        // Extracts and surfaces specific backend error details (e.g. error, message)
+        const serverErrorMessage =
+          data?.error || data?.message || `Server returned status ${response.status}`;
+        throw new Error(serverErrorMessage);
       }
 
-      const savedSubmission = await response.json();
-      setSubmissions((prev) => [savedSubmission, ...prev]);
+      setSubmissions((prev) => [data, ...prev]);
 
       // Reset input fields
       setTitle("");
